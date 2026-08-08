@@ -59,7 +59,8 @@ function omni_cf_coexist_classic_add_to_cart( $product_id, array $posted_fields 
     $_POST['quantity']       = '1';
 
     foreach ( $posted_fields as $key => $value ) {
-        $_POST[ $key ] = $value;
+        $_POST[ $key ]    = $value;
+        $_REQUEST[ $key ] = $value;
     }
 
     WC_Form_Handler::add_to_cart_action( false );
@@ -159,12 +160,10 @@ $crowdfunding_product_id = $crowdfunding_product->save();
 omni_cf_coexist_assert( $wpwham_product_id > 0 && $crowdfunding_product_id > 0, 'Fixture products must be created.' );
 
 try {
-    // Product A: Product Open Pricing only. Crowdfunding is deliberately disabled.
     omni_cf_coexist_enable_wpwham_open_pricing( $wpwham_product_id );
     update_post_meta( $wpwham_product_id, '_alg_crowdfunding_enabled', 'no' );
     update_post_meta( $wpwham_product_id, '_alg_crowdfunding_product_open_price_enabled', 'no' );
 
-    // Product B: Crowdfunding open pricing only. WP Wham Product Open Pricing is deliberately disabled.
     update_post_meta( $crowdfunding_product_id, '_alg_crowdfunding_enabled', 'yes' );
     update_post_meta( $crowdfunding_product_id, '_alg_crowdfunding_product_open_price_enabled', 'yes' );
     update_post_meta( $crowdfunding_product_id, '_alg_crowdfunding_product_open_price_min_price', '3' );
@@ -179,7 +178,6 @@ try {
     $wpwham_product       = wc_get_product( $wpwham_product_id );
     $crowdfunding_product = wc_get_product( $crowdfunding_product_id );
 
-    // Frontend namespaces must remain isolated.
     $wpwham_html = omni_cf_coexist_render_before_add_to_cart( $wpwham_product );
     omni_cf_coexist_assert(
         false !== strpos( $wpwham_html, 'alg_open_price' ),
@@ -193,7 +191,7 @@ try {
     $wpwham_input_name = omni_cf_coexist_extract_input_name( $wpwham_html, 'alg_open_price' );
     omni_cf_coexist_assert(
         '' !== $wpwham_input_name,
-        'Product Open Pricing rendered input must expose a POST field name.'
+        'Product Open Pricing rendered input must expose a request field name.'
     );
 
     $crowdfunding_html = omni_cf_coexist_render_before_add_to_cart( $crowdfunding_product );
@@ -206,7 +204,6 @@ try {
         'Product Open Pricing amount field must not render on the crowdfunding-only product.'
     );
 
-    // Product A: submit the exact field contract rendered by WP Wham 1.7.4.
     $wpwham_cart = omni_cf_coexist_classic_add_to_cart(
         $wpwham_product_id,
         array( $wpwham_input_name => '7.50' )
@@ -221,7 +218,6 @@ try {
     omni_cf_coexist_assert_float( 7.50, $wpwham_item['data']->get_price(), 'WP Wham selected amount must control its cart price.' );
     omni_cf_coexist_assert_float( 7.50, WC()->cart->get_cart_contents_total(), 'WP Wham cart total must equal selected amount.' );
 
-    // Product B: crowdfunding fork must own the selected price and WP Wham must stay out.
     $crowdfunding_cart = omni_cf_coexist_classic_add_to_cart(
         $crowdfunding_product_id,
         array( 'alg_crowdfunding_open_price' => '12.34' )

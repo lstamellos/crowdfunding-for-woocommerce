@@ -23,3 +23,65 @@ jobs:
         run: find . -type f -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
       - name: Security smoke tests
         run: php tests/security-smoke.php
+
+  woocommerce-open-pricing:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      WP_PATH: /tmp/wordpress
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: mysqli, mbstring
+
+      - name: Install WP-CLI
+        run: |
+          curl -fsSL -o /tmp/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x /tmp/wp-cli.phar
+          sudo mv /tmp/wp-cli.phar /usr/local/bin/wp
+          wp --info
+
+      - name: Install WordPress 7.0.3 and WooCommerce 11.0.0
+        run: |
+          mkdir -p "$WP_PATH"
+          wp core download --version=7.0.3 --path="$WP_PATH" --force
+          wp config create \
+            --path="$WP_PATH" \
+            --dbname=wordpress \
+            --dbuser=root \
+            --dbhost=127.0.0.1:3306 \
+            --skip-check
+          ADMIN_PASS="integration-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          wp core install \
+            --path="$WP_PATH" \
+            --url=http://crowdfunding.test \
+            --title="Crowdfunding Integration" \
+            --admin_user=admin \
+            --admin_password="$ADMIN_PASS" \
+            --admin_email=admin@example.test \
+            --skip-email
+          wp plugin install woocommerce \
+            --path="$WP_PATH" \
+            --version=11.0.0 \
+            --activate
+          ln -s "$GITHUB_WORKSPACE" "$WP_PATH/wp-content/plugins/crowdfunding-for-woocommerce"
+          wp plugin activate crowdfunding-for-woocommerce --path="$WP_PATH"
+          wp --path="$WP_PATH" eval 'echo "WordPress " . get_bloginfo("version") . "; WooCommerce " . WC_VERSION . PHP_EOL;'
+
+      - name: Crowdfunding open pricing integration
+        run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/open-pricing.php"

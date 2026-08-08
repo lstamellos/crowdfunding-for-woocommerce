@@ -3,7 +3,7 @@ Contributors: lstamellos, wpwham
 Tags: woocommerce, crowdfunding
 Requires at least: 6.8
 Requires PHP: 8.3
-Tested up to: 6.8
+Tested up to: 7.0
 Stable tag: 3.1.14.1
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -35,6 +35,8 @@ Existing `alg_*` options and `_alg_crowdfunding_*` product metadata are preserve
 HPOS is deliberately declared incompatible in 3.1.14.1 because the upstream order-discovery layer still queries `shop_order` posts directly. HPOS support will only be enabled after the order-query layer is migrated to WooCommerce CRUD APIs and parity-tested.
 
 Cart and Checkout Blocks are also deliberately declared incompatible until Store API / Blocks behavior is implemented and tested. Classic WooCommerce cart and checkout are the current target.
+
+The crowdfunding open-price path is integration-tested against WordPress 7.0.3 and WooCommerce 11.0.0, including coexistence with Product Open Pricing (Name Your Price) for WooCommerce 1.7.4 on a separate product.
 
 = Public Shortcodes =
 
@@ -91,6 +93,7 @@ Other:
 * COMPAT: Declare HPOS incompatible until the order-query layer is migrated and tested.
 * COMPAT: Declare Cart and Checkout Blocks incompatible until Store API / Blocks support is implemented and tested.
 * COMPAT: Preserve existing `alg_*` options and `_alg_crowdfunding_*` product metadata without migration.
+* TEST: Validate coexistence with Product Open Pricing (Name Your Price) for WooCommerce 1.7.4 on separate products.
 
 = 3.1.14 - 2025-06-01 =
 * Upstream WP Wham release used as the immutable fork baseline (`upstream-3.1.14`).

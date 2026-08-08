@@ -21,6 +21,8 @@ The crowdfunding open-price path is tested against WordPress 7.0.3, WooCommerce 
 
 Coexistence is also integration-tested with **Product Open Pricing (Name Your Price) for WooCommerce 1.7.4** using two separate products: one Product Open Pricing product with crowdfunding disabled, and one crowdfunding open-price product with Product Open Pricing disabled. The tests verify isolated frontend fields, isolated cart-item keys and independent cart price/totals handling.
 
+A mixed cart/order containing both open-pricing products at the same time is a separate scenario and is not yet part of the compatibility baseline.
+
 ## Releases
 
 Release tags matching `v*` are packaged automatically as installable WordPress ZIP files. Release packages exclude repository-only CI/tests/documentation artifacts and contain the plugin under the `crowdfunding-for-woocommerce/` root directory.

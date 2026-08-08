@@ -85,3 +85,14 @@ jobs:
 
       - name: Crowdfunding open pricing integration
         run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/open-pricing.php"
+
+      - name: Install Product Open Pricing 1.7.4
+        run: |
+          wp plugin install product-open-pricing-name-your-price-for-woocommerce \
+            --path="$WP_PATH" \
+            --version=1.7.4 \
+            --activate
+          wp --path="$WP_PATH" plugin get product-open-pricing-name-your-price-for-woocommerce --field=version
+
+      - name: Open pricing coexistence integration
+        run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/open-pricing-coexistence.php"

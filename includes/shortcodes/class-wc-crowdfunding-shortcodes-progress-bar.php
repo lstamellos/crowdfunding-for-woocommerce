@@ -36,25 +36,47 @@ class Alg_WC_Crowdfunding_Shortcodes_Progress_Bar extends Alg_WC_Crowdfunding_Sh
 	 * @since   2.3.0
 	 */
 	function get_progress_bar( $atts, $value, $max_value ) {
-		if ( empty( $atts ) ) {
-			$atts = array();
+		$atts      = is_array( $atts ) ? $atts : array();
+		$value     = max( 0, (float) $value );
+		$max_value = max( 0, (float) $max_value );
+		$type      = isset( $atts['type'] ) ? sanitize_key( $atts['type'] ) : 'standard';
+
+		if ( in_array( $type, array( 'line', 'circle' ), true ) ) {
+			$atts['type'] = $type;
+			return $this->get_js_progress_bar( $atts, $value, $max_value );
 		}
-		if ( ! isset( $atts['type'] ) ) {
-			$atts['type'] = 'standard';
+
+		return sprintf(
+			'<progress value="%s" max="%s"></progress>',
+			esc_attr( $value ),
+			esc_attr( $max_value )
+		);
+	}
+
+	/**
+	 * Sanitize a CSS dimension accepted by the progress-bar renderer.
+	 */
+	private function sanitize_css_dimension( $value, $default ) {
+		$value = trim( (string) $value );
+		if ( 'auto' === strtolower( $value ) || preg_match( '/^-?(?:\d+(?:\.\d+)?|\.\d+)(?:px|%|em|rem|vh|vw|vmin|vmax|pt)?$/i', $value ) ) {
+			return $value;
 		}
-		if ( $value < 0 ) {
-			$value = 0;
+		return $default;
+	}
+
+	/**
+	 * Sanitize a CSS color value accepted by ProgressBar.js.
+	 */
+	private function sanitize_color_value( $value, $default ) {
+		$value = trim( (string) $value );
+		if (
+			preg_match( '/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i', $value ) ||
+			preg_match( '/^[a-z]+$/i', $value ) ||
+			preg_match( '/^(?:rgb|rgba|hsl|hsla)\([0-9.,%\s-]+\)$/i', $value )
+		) {
+			return $value;
 		}
-		if ( $max_value < 0 ) {
-			$max_value = 0;
-		}
-		switch ( $atts['type'] ) {
-			case 'line':
-			case 'circle':
-				return $this->get_js_progress_bar( $atts, $value, $max_value );
-			default: // 'standard'
-				return '<progress value="' . $value . '" max="' . $max_value . '"></progress>';
-		}
+		return $default;
 	}
 
 	/**
@@ -65,45 +87,39 @@ class Alg_WC_Crowdfunding_Shortcodes_Progress_Bar extends Alg_WC_Crowdfunding_Sh
 	 * @todo    [dev] `width` (maybe `100%`)
 	 */
 	function get_js_progress_bar( $atts, $value, $max_value ) {
-		// Color
-		if ( ! isset( $atts['color'] ) ) {
-			$atts['color'] = '#2bde73';
+		$type = isset( $atts['type'] ) && in_array( $atts['type'], array( 'line', 'circle' ), true ) ? $atts['type'] : 'line';
+
+		$color      = $this->sanitize_color_value( $atts['color'] ?? '#2bde73', '#2bde73' );
+		$text_color = $this->sanitize_color_value( $atts['text_color'] ?? '#999', '#999' );
+
+		$text_position = isset( $atts['text_position'] ) ? sanitize_key( $atts['text_position'] ) : 'right';
+		if ( ! in_array( $text_position, array( 'left', 'right', 'variable' ), true ) ) {
+			$text_position = 'right';
 		}
-		// Text properties
-		if ( ! isset( $atts['text_color'] ) ) {
-			$atts['text_color'] = '#999';
-		}
-		if ( ! isset( $atts['text_position'] ) ) {
-			$atts['text_position'] = 'right';
-		}
-		if ( ! isset( $atts['text_position_variable_max_left'] ) ) {
-			$atts['text_position_variable_max_left'] = '75';
-		}
-		if ( ! isset( $atts['text_top'] ) ) {
-			$atts['text_top'] = '30px';
-		}
-		// Style
-		if ( ! isset( $atts['width'] ) ) {
-			$atts['width'] = '200px';
-		}
-		if ( ! isset( $atts['height'] ) ) {
-			$atts['height'] = ( 'line' === $atts['type'] ) ? '8px' : '200px';
-		}
-		if ( ! isset( $atts['style'] ) ) {
-			$atts['style'] = '';
-		}
-		$atts['style'] = 'width:' . $atts['width'] . ';height:' . $atts['height'] . ';position:relative;' . $atts['style'];
-		unset( $atts['width'] );
-		unset( $atts['height'] );
-		// Value
-		$atts['value'] = ( 0 != $max_value ? $value / $max_value : 0 );
-		// Forming progress bar attributes
-		$bar_attributes = '';
-		foreach ( $atts as $key => $value ) {
-			$bar_attributes .= ' ' . $key . '="' . $value . '"';
-		}
-		// Forming the progress bar
-		return '<div class="alg-progress-bar"' . $bar_attributes . '>' . '</div>';
+
+		$text_position_variable_max_left = isset( $atts['text_position_variable_max_left'] )
+			? min( 100, max( 0, (float) $atts['text_position_variable_max_left'] ) )
+			: 75;
+		$text_top = $this->sanitize_css_dimension( $atts['text_top'] ?? '30px', '30px' );
+
+		$width  = $this->sanitize_css_dimension( $atts['width'] ?? '200px', '200px' );
+		$height = $this->sanitize_css_dimension( $atts['height'] ?? ( 'line' === $type ? '8px' : '200px' ), ( 'line' === $type ? '8px' : '200px' ) );
+		$style  = isset( $atts['style'] ) ? (string) $atts['style'] : '';
+		$style  = safecss_filter_attr( 'width:' . $width . ';height:' . $height . ';position:relative;' . $style );
+
+		$progress_value = ( 0.0 !== (float) $max_value ) ? (float) $value / (float) $max_value : 0;
+
+		return sprintf(
+			'<div class="alg-progress-bar" type="%1$s" color="%2$s" text_color="%3$s" text_position="%4$s" text_position_variable_max_left="%5$s" text_top="%6$s" style="%7$s" value="%8$s"></div>',
+			esc_attr( $type ),
+			esc_attr( $color ),
+			esc_attr( $text_color ),
+			esc_attr( $text_position ),
+			esc_attr( $text_position_variable_max_left ),
+			esc_attr( $text_top ),
+			esc_attr( $style ),
+			esc_attr( $progress_value )
+		);
 	}
 
 	/**
@@ -113,7 +129,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Progress_Bar extends Alg_WC_Crowdfunding_Sh
 	 * @since   2.2.1
 	 */
 	function alg_product_crowdfunding_time_remaining_progress_bar( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -145,7 +161,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Progress_Bar extends Alg_WC_Crowdfunding_Sh
 	 * @since   2.2.0
 	 */
 	function alg_product_crowdfunding_goal_items_remaining_progress_bar( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -161,7 +177,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Progress_Bar extends Alg_WC_Crowdfunding_Sh
 	 * @since   2.2.0
 	 */
 	function alg_product_crowdfunding_goal_backers_remaining_progress_bar( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -177,7 +193,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Progress_Bar extends Alg_WC_Crowdfunding_Sh
 	 * @since   2.2.0
 	 */
 	function alg_product_crowdfunding_goal_remaining_progress_bar( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}

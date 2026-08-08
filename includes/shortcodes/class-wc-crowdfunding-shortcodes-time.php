@@ -112,16 +112,20 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	 * @since   1.1.0
 	 */
 	function alg_product_crowdfunding_deadline_datetime( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
 		return $this->output_shortcode(
-			date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
-				strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline', true ) ) ) .
-			' ' .
-			date_i18n( ( isset( $atts['time_format'] ) ? $atts['time_format'] : get_option( 'time_format' ) ),
-				strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline_time', true ) ) ), $atts );
+			esc_html(
+				date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
+					strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline', true ) ) ) .
+				' ' .
+				date_i18n( ( isset( $atts['time_format'] ) ? $atts['time_format'] : get_option( 'time_format' ) ),
+					strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline_time', true ) ) )
+			),
+			$atts
+		);
 	}
 
 	/**
@@ -131,11 +135,11 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	 * @since   1.1.0
 	 */
 	function alg_product_crowdfunding_deadline_time( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
-		return $this->output_shortcode( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline_time', true ), $atts );
+		return $this->output_shortcode( esc_html( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline_time', true ) ), $atts );
 	}
 
 	/**
@@ -145,16 +149,20 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	 * @since   1.1.0
 	 */
 	function alg_product_crowdfunding_startdatetime( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
 		return $this->output_shortcode(
-			date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
-				strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_startdate', true ) ) ) .
-			' ' .
-			date_i18n( ( isset( $atts['time_format'] ) ? $atts['time_format'] : get_option( 'time_format' ) ),
-				strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_starttime', true ) ) ), $atts );
+			esc_html(
+				date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
+					strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_startdate', true ) ) ) .
+				' ' .
+				date_i18n( ( isset( $atts['time_format'] ) ? $atts['time_format'] : get_option( 'time_format' ) ),
+					strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_starttime', true ) ) )
+			),
+			$atts
+		);
 	}
 
 	/**
@@ -164,11 +172,11 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	 * @since   1.1.0
 	 */
 	function alg_product_crowdfunding_starttime( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
-		return $this->output_shortcode( get_post_meta( $product_id, '_' . 'alg_crowdfunding_starttime', true ), $atts );
+		return $this->output_shortcode( esc_html( get_post_meta( $product_id, '_' . 'alg_crowdfunding_starttime', true ) ), $atts );
 	}
 
 	/**
@@ -178,12 +186,12 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	 * @since   1.0.0
 	 */
 	function alg_product_crowdfunding_startdate( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
-		return $this->output_shortcode( date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
-			strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_startdate', true ) ) ), $atts );
+		return $this->output_shortcode( esc_html( date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
+			strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_startdate', true ) ) ) ), $atts );
 	}
 
 	/**
@@ -193,12 +201,12 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	 * @since   1.0.0
 	 */
 	function alg_product_crowdfunding_deadline( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
-		return $this->output_shortcode( date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
-			strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline', true ) ) ), $atts );
+		return $this->output_shortcode( esc_html( date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
+			strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline', true ) ) ) ), $atts );
 	}
 
 	/**
@@ -211,7 +219,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 		if ( empty( $atts ) ) {
 			$atts = array();
 		}
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -227,14 +235,12 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 			$atts['campaign_started']    = __( 'The campaign started %s ago', 'crowdfunding-for-woocommerce' );
 		}
 
-		if ( ! isset( $atts['precision'] ) ) {
-			$atts['precision'] = 6;
-		}
+		$atts['precision'] = isset( $atts['precision'] ) ? min( 6, absint( $atts['precision'] ) ) : 6;
 
 		if ( $from < $to ) {
-			$return = sprintf( $atts['campaign_will_start'], $this->get_date_diff( $from, $to, $atts['precision'] ) );
+			$return = sprintf( wp_kses_post( $atts['campaign_will_start'] ), esc_html( $this->get_date_diff( $from, $to, $atts['precision'] ) ) );
 		} else {
-			$return = sprintf( $atts['campaign_started'],    $this->get_date_diff( $from, $to, $atts['precision'] ) );
+			$return = sprintf( wp_kses_post( $atts['campaign_started'] ), esc_html( $this->get_date_diff( $from, $to, $atts['precision'] ) ) );
 		}
 
 		return $this->output_shortcode( $return, $atts );
@@ -251,7 +257,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 		if ( empty( $atts ) ) {
 			$atts = array();
 		}
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -266,14 +272,12 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 			$atts['campaign_ended']    = __( 'The campaign ended %s ago', 'crowdfunding-for-woocommerce' );
 		}
 
-		if ( ! isset( $atts['precision'] ) ) {
-			$atts['precision'] = 6;
-		}
+		$atts['precision'] = isset( $atts['precision'] ) ? min( 6, absint( $atts['precision'] ) ) : 6;
 
 		if ( $from < $to ) {
-			$return = sprintf( $atts['campaign_will_end'], $this->get_date_diff( $from, $to, $atts['precision'] ) );
+			$return = sprintf( wp_kses_post( $atts['campaign_will_end'] ), esc_html( $this->get_date_diff( $from, $to, $atts['precision'] ) ) );
 		} else {
-			$return = sprintf( $atts['campaign_ended'],    $this->get_date_diff( $from, $to, $atts['precision'] ) );
+			$return = sprintf( wp_kses_post( $atts['campaign_ended'] ), esc_html( $this->get_date_diff( $from, $to, $atts['precision'] ) ) );
 		}
 		return $this->output_shortcode( $return, $atts );
 	}

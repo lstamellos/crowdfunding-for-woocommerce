@@ -41,11 +41,17 @@ class Alg_WC_Crowdfunding_Settings_General extends Alg_WC_Crowdfunding_Settings_
 	 * @since   2.5.0
 	 */
 	function manual_products_data_update() {
-		if ( isset( $_GET['alg_wc_crowdfunding_products_data_update'] ) ) {
-			do_action( 'alg_update_products_data_hook' );
-			wp_safe_redirect( remove_query_arg( 'alg_wc_crowdfunding_products_data_update' ) );
-			exit;
+		if ( ! isset( $_GET['alg_wc_crowdfunding_products_data_update'] ) ) {
+			return;
 		}
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'You are not allowed to update crowdfunding data.', 'crowdfunding-for-woocommerce' ), '', array( 'response' => 403 ) );
+		}
+
+		check_admin_referer( 'alg_wc_crowdfunding_products_data_update' );
+		do_action( 'alg_update_products_data_hook' );
+		wp_safe_redirect( remove_query_arg( array( 'alg_wc_crowdfunding_products_data_update', '_wpnonce' ) ) );
+		exit;
 	}
 
 	/**
@@ -61,10 +67,11 @@ class Alg_WC_Crowdfunding_Settings_General extends Alg_WC_Crowdfunding_Settings_
 			isset( $_GET['tab'] ) && 'alg_crowdfunding' === $_GET['tab']  &&
 			( ! isset( $_GET['section'] ) || '' === $_GET['section'] )
 		) {
+			$message = wp_json_encode( __( 'This may take a while... Are you sure?', 'crowdfunding-for-woocommerce' ) );
 			echo '<script type="text/javascript">
 				window.onload = function() {
 					function alg_crowdfunding_data_update_now_confirmation() {
-						return confirm("' . __( 'This may take a while... Are you sure?', 'crowdfunding-for-woocommerce' ) . '");
+						return confirm(' . $message . ');
 					}
 					document.getElementById("alg_crowdfunding_products_data_update_now").onclick = alg_crowdfunding_data_update_now_confirmation;
 				}
@@ -278,8 +285,8 @@ class Alg_WC_Crowdfunding_Settings_General extends Alg_WC_Crowdfunding_Settings_
 					'weekly'     => __( 'Update weekly', 'crowdfunding-for-woocommerce' ),
 					'manual'     => __( 'Realtime (not recommended)', 'crowdfunding-for-woocommerce' ),
 				),
-				'desc'      => '<a class="button" href="' . add_query_arg( 'alg_wc_crowdfunding_products_data_update', '1' ) . '"' .
-					' id="alg_crowdfunding_products_data_update_now">' . __( 'Update data now', 'crowdfunding-for-woocommerce' ) . '</a>',
+				'desc'      => '<a class="button" href="' . esc_url( wp_nonce_url( add_query_arg( 'alg_wc_crowdfunding_products_data_update', '1' ), 'alg_wc_crowdfunding_products_data_update' ) ) . '"' .
+					' id="alg_crowdfunding_products_data_update_now">' . esc_html__( 'Update data now', 'crowdfunding-for-woocommerce' ) . '</a>',
 			),
 			array(
 				'type'      => 'sectionend',

@@ -29,7 +29,6 @@ class Alg_WC_Crowdfunding_Admin {
 			// Meta boxes
 			add_action( 'add_meta_boxes',    array( $this, 'add_meta_box' ) );
 			add_action( 'save_post_product', array( $this, 'save_meta_box' ), PHP_INT_MAX, 2 );
-			add_action( 'admin_notices',     array( $this, 'admin_notices' ) );
 			// Admin "Crowdfunding" column
 			add_filter( 'manage_edit-product_columns',        array( $this, 'add_product_crowdfunding_columns' ),    PHP_INT_MAX );
 			add_action( 'manage_product_posts_custom_column', array( $this, 'render_product_crowdfunding_columns' ), PHP_INT_MAX );
@@ -143,12 +142,19 @@ class Alg_WC_Crowdfunding_Admin {
 	 * @since   2.9.0
 	 */
 	function reset_campaign_ended_meta() {
-		if ( isset( $_GET['alg_wc_crowdfunding_reset_campaign_ended_meta'] ) ) {
-			$product_id = sanitize_key( $_GET['alg_wc_crowdfunding_reset_campaign_ended_meta'] );
-			update_post_meta( $product_id, '_' . 'alg_crowdfunding_campaign_ended', 'no' );
-			wp_safe_redirect( remove_query_arg( 'alg_wc_crowdfunding_reset_campaign_ended_meta' ) );
-			exit;
+		if ( ! isset( $_GET['alg_wc_crowdfunding_reset_campaign_ended_meta'] ) ) {
+			return;
 		}
+
+		$product_id = absint( wp_unslash( $_GET['alg_wc_crowdfunding_reset_campaign_ended_meta'] ) );
+		if ( ! $product_id || ! current_user_can( 'manage_woocommerce' ) || ! current_user_can( 'edit_post', $product_id ) ) {
+			wp_die( esc_html__( 'You are not allowed to modify this crowdfunding campaign.', 'crowdfunding-for-woocommerce' ), '', array( 'response' => 403 ) );
+		}
+
+		check_admin_referer( 'alg_wc_crowdfunding_reset_campaign_ended_meta_' . $product_id );
+		update_post_meta( $product_id, '_alg_crowdfunding_campaign_ended', 'no' );
+		wp_safe_redirect( remove_query_arg( array( 'alg_wc_crowdfunding_reset_campaign_ended_meta', '_wpnonce' ) ) );
+		exit;
 	}
 
 	/**
@@ -159,11 +165,19 @@ class Alg_WC_Crowdfunding_Admin {
 	 * @todo    [dev] sanitize?
 	 */
 	function manual_single_product_data_update() {
-		if ( isset( $_GET['alg_wc_crowdfunding_update_product_data'] ) ) {
-			alg_wc_crdfnd_calculate_and_update_product_orders_data( $_GET['alg_wc_crowdfunding_update_product_data'] );
-			wp_safe_redirect( remove_query_arg( 'alg_wc_crowdfunding_update_product_data' ) );
-			exit;
+		if ( ! isset( $_GET['alg_wc_crowdfunding_update_product_data'] ) ) {
+			return;
 		}
+
+		$product_id = absint( wp_unslash( $_GET['alg_wc_crowdfunding_update_product_data'] ) );
+		if ( ! $product_id || ! current_user_can( 'manage_woocommerce' ) || ! current_user_can( 'edit_post', $product_id ) ) {
+			wp_die( esc_html__( 'You are not allowed to update this crowdfunding campaign.', 'crowdfunding-for-woocommerce' ), '', array( 'response' => 403 ) );
+		}
+
+		check_admin_referer( 'alg_wc_crowdfunding_update_product_data_' . $product_id );
+		alg_wc_crdfnd_calculate_and_update_product_orders_data( $product_id );
+		wp_safe_redirect( remove_query_arg( array( 'alg_wc_crowdfunding_update_product_data', '_wpnonce' ) ) );
+		exit;
 	}
 
 	/**
@@ -204,24 +218,25 @@ class Alg_WC_Crowdfunding_Admin {
 	 * @since   2.0.0
 	 */
 	function save_meta_box( $post_id, $post ) {
-		// Check that we are saving with current metabox displayed.
-		if ( ! isset( $_POST[ 'alg_' . $this->id . '_save_post' ] ) ) return;
-		// Save options
+		if ( ! isset( $_POST[ 'alg_' . $this->id . '_save_post' ] ) ) {
+			return;
+		}
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+		if ( wp_is_post_revision( $post_id ) || ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+		if ( ! isset( $_POST['alg_crowdfunding_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['alg_crowdfunding_nonce'] ) ), 'alg_crowdfunding_save_product_' . $post_id ) ) {
+			return;
+		}
+
 		foreach ( $this->get_crowdfunding_options() as $option ) {
 			if ( 'title' === $option['type'] ) {
 				continue;
 			}
-			$option_value = isset( $_POST[ $option['name'] ] ) ? $_POST[ $option['name'] ] : '';
-			if ( 'checkbox' === $option['type'] ) {
-				$option_value = ( '' != $option_value ) ? 'yes' : 'no';
-			}
-			if ( 'alg_crowdfunding_enabled' === $option['name'] ) {
-				$c = alg_wc_crdfnd_count_crowdfunding_products( $post_id ) + 1;
-				if ( 'yes' === $option_value && $c >= apply_filters( 'alg_crowdfunding_option', 4, 'count' ) ) {
-					add_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
-					$option_value = 'no';
-				}
-			}
+			$raw_value    = isset( $_POST[ $option['name'] ] ) ? wp_unslash( $_POST[ $option['name'] ] ) : '';
+			$option_value = $this->sanitize_meta_box_value( $option, $raw_value );
 			update_post_meta( $post_id, '_' . $option['name'], $option_value );
 		}
 		// V1 convert done (message removal)
@@ -237,27 +252,34 @@ class Alg_WC_Crowdfunding_Admin {
 	}
 
 	/**
-	 * add_notice_query_var.
-	 *
-	 * @version 2.0.0
-	 * @since   2.0.0
+	 * Sanitize a crowdfunding product meta-box value according to its field type.
 	 */
-	function add_notice_query_var( $location ) {
-		remove_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
-		return add_query_arg( array( 'alg_admin_notice' => true ), $location );
-	}
-
-	/**
-	 * admin_notices.
-	 *
-	 * @version 3.1.10
-	 * @since   2.0.0
-	 */
-	function admin_notices() {
-		if ( ! isset( $_GET['alg_admin_notice'] ) ) {
-			return;
+	private function sanitize_meta_box_value( $option, $value ) {
+		switch ( $option['type'] ) {
+			case 'checkbox':
+				return '' !== $value ? 'yes' : 'no';
+			case 'price':
+				if ( '' === trim( (string) $value ) ) {
+					return '';
+				}
+				$normalized = wc_format_decimal( $value, wc_get_price_decimals() );
+				if ( '' === $normalized || ! is_numeric( $normalized ) ) {
+					return '';
+				}
+				return wc_format_decimal( max( 0, (float) $normalized ), wc_get_price_decimals() );
+			case 'number':
+				return '' === trim( (string) $value ) ? '' : max( 0, intval( $value ) );
+			case 'select':
+				$value = sanitize_text_field( (string) $value );
+				return isset( $option['options'][ $value ] ) ? $value : '';
+			case 'textarea':
+				return wp_kses_post( (string) $value );
+			case 'date':
+			case 'time':
+			case 'text':
+			default:
+				return sanitize_text_field( (string) $value );
 		}
-		?><div class="error"><p><?php echo '<div class="message">' . sprintf( __( 'Free plugin\'s version is limited to 3 crowdfunding products enabled at the same time. Please visit <a href="%s" target="_blank">plugin\'s page</a> for more information.', 'crowdfunding-for-woocommerce' ), 'https://wpwham.com/products/crowdfunding-for-woocommerce/?utm_source=admin_notice&utm_campaign=free&utm_medium=crowdfunding' ) . '</div>'; ?></p></div><?php
 	}
 
 	/**
@@ -316,7 +338,7 @@ class Alg_WC_Crowdfunding_Admin {
 				if ( 'checkbox' === $option['type'] && '' == $option_value ) {
 					$option_value = 'no';
 				}
-				$input_ending = ' id="' . $option['name'] . '" name="' . $option['name'] . '" value="' . $option_value . '" placeholder="' . $option['placeholder'] . '">';
+				$input_ending = ' id="' . esc_attr( $option['name'] ) . '" name="' . esc_attr( $option['name'] ) . '" value="' . esc_attr( $option_value ) . '" placeholder="' . esc_attr( $option['placeholder'] ) . '">';
 				if ( 'checkbox' === $option['type'] && 'yes' === $option_value ) $input_ending = ' checked="checked"' . $input_ending;
 				$field_html = '';
 				$is_required = ( $option['required'] ) ? ' required' : '';
@@ -336,24 +358,25 @@ class Alg_WC_Crowdfunding_Admin {
 						$field_html = '<input' . $is_required . ' class="input-text" display="alg_crowdfunding_time" type="text"' . $input_ending;
 						break;
 					case 'textarea':
-						$field_html = '<textarea' . $is_required . ' style="min-width:300px;"' . ' id="' . $option['name'] . '" name="' . $option['name'] . '">' . $option_value . '</textarea>';
+						$field_html = '<textarea' . $is_required . ' style="min-width:300px;"' . ' id="' . esc_attr( $option['name'] ) . '" name="' . esc_attr( $option['name'] ) . '">' . esc_textarea( $option_value ) . '</textarea>';
 						break;
 					case 'select':
 						$options_html = '';
 						foreach ( $option['options'] as $option_key => $option_name ) {
-							$options_html .= '<option value="' . $option_key . '" ' . selected( $option_key, $option_value, false ) . '>' . $option_name . '</option>';
+							$options_html .= '<option value="' . esc_attr( $option_key ) . '" ' . selected( $option_key, $option_value, false ) . '>' . esc_html( $option_name ) . '</option>';
 						}
-						$field_html = '<select' . $is_required . ' id="' . $option['name'] . '" name="' . $option['name'] . '">' . $options_html . '</select>';
+						$field_html = '<select' . $is_required . ' id="' . esc_attr( $option['name'] ) . '" name="' . esc_attr( $option['name'] ) . '">' . $options_html . '</select>';
 						break;
 				}
 				$html .= '<tr>';
-				$html .= '<th style="width:25%;">' . $option['title'] . '</th>';
+				$html .= '<th style="width:25%;">' . wp_kses_post( $option['title'] ) . '</th>';
 				$html .= '<td>' . $field_html . '</td>';
 				$html .= '</tr>';
 			}
 		}
 		$html .= '</table>';
 		$html .= '<input type="hidden" name="alg_' . $this->id . '_save_post" value="alg_' . $this->id . '_save_post">';
+		$html .= wp_nonce_field( 'alg_crowdfunding_save_product_' . $current_post_id, 'alg_crowdfunding_nonce', true, false );
 		echo $html;
 
 		$html_v1_convert = '';
@@ -420,11 +443,13 @@ class Alg_WC_Crowdfunding_Admin {
 		} else {
 			echo '<em>' . __( 'No data yet.', 'crowdfunding-for-woocommerce' ) . '</em>';
 		}
-		echo '<p>' . '<a class="button" style="width:100%;text-align:center;" href="' . add_query_arg( 'alg_wc_crowdfunding_update_product_data', $current_post_id ) . '">' .
-			__( 'Update Data Now', 'crowdfunding-for-woocommerce' ) . '</a>' . '</p>';
+		$update_url = wp_nonce_url( add_query_arg( 'alg_wc_crowdfunding_update_product_data', $current_post_id ), 'alg_wc_crowdfunding_update_product_data_' . $current_post_id );
+		echo '<p><a class="button" style="width:100%;text-align:center;" href="' . esc_url( $update_url ) . '">' .
+			esc_html__( 'Update Data Now', 'crowdfunding-for-woocommerce' ) . '</a></p>';
 		if ( 'yes' === get_post_meta( $current_post_id, '_' . 'alg_crowdfunding_campaign_ended', true ) ) {
-			echo '<p>' . '<a href="' . add_query_arg( 'alg_wc_crowdfunding_reset_campaign_ended_meta', $current_post_id ) . '">' .
-				__( 'Reset "campaign ended" meta', 'crowdfunding-for-woocommerce' ) . '</a>' .
+			$reset_url = wp_nonce_url( add_query_arg( 'alg_wc_crowdfunding_reset_campaign_ended_meta', $current_post_id ), 'alg_wc_crowdfunding_reset_campaign_ended_meta_' . $current_post_id );
+			echo '<p><a href="' . esc_url( $reset_url ) . '">' .
+				esc_html__( 'Reset "campaign ended" meta', 'crowdfunding-for-woocommerce' ) . '</a>' .
 				wc_help_tip( __( 'Affects "Crowdfunding Campaign Ended" email and action.', 'crowdfunding-for-woocommerce' ), true ) .
 			'</p>';
 		}

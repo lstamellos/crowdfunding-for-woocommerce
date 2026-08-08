@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build installable plugin ZIP
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          PACKAGE_ROOT="/tmp/package/crowdfunding-for-woocommerce"
+          DIST="$GITHUB_WORKSPACE/dist"
+          ZIP_NAME="crowdfunding-for-woocommerce-${VERSION}.zip"
+
+          rm -rf /tmp/package "$DIST"
+          mkdir -p "$PACKAGE_ROOT" "$DIST"
+
+          rsync -a ./ "$PACKAGE_ROOT/" \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='tests/' \
+            --exclude='README.md' \
+            --exclude='SECURITY.md' \
+            --exclude='dist/'
+
+          cd /tmp/package
+          zip -qr "$DIST/$ZIP_NAME" crowdfunding-for-woocommerce
+
+          cd "$DIST"
+          sha256sum "$ZIP_NAME" > "$ZIP_NAME.sha256"
+
+          unzip -l "$ZIP_NAME"
+          cat "$ZIP_NAME.sha256"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          ZIP="dist/crowdfunding-for-woocommerce-${VERSION}.zip"
+          SHA="${ZIP}.sha256"
+
+          RELEASE_ARGS=(
+            "$TAG"
+            "$ZIP"
+            "$SHA"
+            --verify-tag
+            --title "Crowdfunding for WooCommerce — OmniaTV ${VERSION}"
+            --generate-notes
+          )
+
+          if [[ "$VERSION" == *-* ]]; then
+            RELEASE_ARGS+=(--prerelease)
+          fi
+
+          gh release create "${RELEASE_ARGS[@]}"

@@ -55,7 +55,7 @@ if ( ! function_exists( 'alg_wc_crdfnd_variation_radio_button' ) ) {
 		$is_checked = true;
 		foreach ( $variation['attributes'] as $attribute_full_name => $attribute_value ) {
 
-			$attributes_html .= ' ' . $attribute_full_name . '="' . $attribute_value . '"';
+			$attributes_html .= ' ' . sanitize_key( $attribute_full_name ) . '="' . esc_attr( $attribute_value ) . '"';
 
 			$attribute_name = $attribute_full_name;
 			$prefix = 'attribute_';
@@ -74,7 +74,7 @@ if ( ! function_exists( 'alg_wc_crdfnd_variation_radio_button' ) ) {
 				}
 			}
 
-			$variation_attributes_display_values[] = $attribute_value;
+			$variation_attributes_display_values[] = esc_html( $attribute_value );
 
 		}
 		$variation_title = implode( ', ', $variation_attributes_display_values ) . ' (' . wc_price( $variation['display_price'] ) . ')';
@@ -82,9 +82,9 @@ if ( ! function_exists( 'alg_wc_crdfnd_variation_radio_button' ) ) {
 		$is_checked = checked( $is_checked, true, false );
 
 		echo '<p>';
-		echo '<input name="alg_variations" type="radio"' . $attributes_html . ' variation_id="' . $variation_id . '"' . $is_checked . '>' . ' ' . $variation_title;
+		echo '<input name="alg_variations" type="radio"' . $attributes_html . ' variation_id="' . absint( $variation_id ) . '"' . $is_checked . '>' . ' ' . wp_kses_post( $variation_title );
 		echo '<br>';
-		echo '<small>' . get_post_meta( $variation_id, '_variation_description', true )  . '</small>';
+		echo '<small>' . wp_kses_post( get_post_meta( $variation_id, '_variation_description', true ) ) . '</small>';
 		echo '</p>';
 	}
 }
@@ -105,8 +105,8 @@ if ( ! function_exists( 'alg_wc_crdfnd_get_table_html' ) ) {
 			'columns_styles'     => array(),
 		);
 		$args = array_merge( $defaults, $args );
-		$table_class = ( '' == $args['table_class'] ) ? '' : ' class="' . $args['table_class'] . '"';
-		$table_style = ( '' == $args['table_style'] ) ? '' : ' style="' . $args['table_style'] . '"';
+		$table_class = ( '' == $args['table_class'] ) ? '' : ' class="' . esc_attr( $args['table_class'] ) . '"';
+		$table_style = ( '' == $args['table_style'] ) ? '' : ' style="' . esc_attr( safecss_filter_attr( $args['table_style'] ) ) . '"';
 		$html = '';
 		$html .= '<table' . $table_class . $table_style . '>';
 		$html .= '<tbody>';
@@ -116,12 +116,12 @@ if ( ! function_exists( 'alg_wc_crdfnd_get_table_html' ) ) {
 				$th_or_td = ( ( 0 === $row_number && 'horizontal' === $args['table_heading_type'] ) || ( 0 === $column_number && 'vertical' === $args['table_heading_type'] ) ) ?
 					'th' : 'td';
 				$column_class = ( ! empty( $args['columns_classes'] ) && isset( $args['columns_classes'][ $column_number ] ) ) ?
-					' class="' . $args['columns_classes'][ $column_number ] . '"' : '';
+					' class="' . esc_attr( $args['columns_classes'][ $column_number ] ) . '"' : '';
 				$column_style = ( ! empty( $args['columns_styles'] ) && isset( $args['columns_styles'][ $column_number ] ) ) ?
-					' style="' . $args['columns_styles'][ $column_number ] . '"' : '';
+					' style="' . esc_attr( safecss_filter_attr( $args['columns_styles'][ $column_number ] ) ) . '"' : '';
 
 				$html .= '<' . $th_or_td . $column_class . $column_style . '>';
-				$html .= $value;
+				$html .= wp_kses_post( (string) $value );
 				$html .= '</' . $th_or_td . '>';
 			}
 			$html .= '</tr>';
@@ -140,7 +140,7 @@ if ( ! function_exists( 'alg_wc_crdfnd_get_product_orders_data' ) ) {
 	 * @since   2.3.0
 	 */
 	function alg_wc_crdfnd_get_product_orders_data( $return_value = 'total_orders', $atts = array() ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = isset( $atts['product_id'] ) ? absint( $atts['product_id'] ) : absint( get_the_ID() );
 		if ( ! $product_id ) {
 			return '';
 		}

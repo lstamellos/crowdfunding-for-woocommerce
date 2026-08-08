@@ -1,16 +1,18 @@
 <?php
 /*
-Plugin Name: Crowdfunding for WooCommerce
-Plugin URI: https://wpwham.com/products/crowdfunding-for-woocommerce/
-Description: Crowdfunding products for WooCommerce.
-Version: 3.1.14
-Author: WP Wham
-Author URI: https://wpwham.com/
+Plugin Name: Crowdfunding for WooCommerce — OmniaTV
+Plugin URI: https://github.com/lstamellos/crowdfunding-for-woocommerce
+Description: Maintained OmniaTV fork for administrator-managed WooCommerce crowdfunding campaigns.
+Version: 3.1.14.1
+Author: OmniaTV
+Author URI: https://omniatv.com/
+Update URI: https://github.com/lstamellos/crowdfunding-for-woocommerce
 Text Domain: crowdfunding-for-woocommerce
 Domain Path: /langs
 Copyright: © 2018-2025 WP Wham. All rights reserved.
+Copyright: © 2026 OmniaTV modifications.
 License: GNU General Public License v3.0
-License URI: http://www.gnu.org/licenses/gpl-3.0.html
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
 */
 
 // Exit if accessed directly
@@ -23,18 +25,10 @@ if (
 	! ( is_multisite() && array_key_exists( $plugin, get_site_option( 'active_sitewide_plugins', array() ) ) )
 ) return;
 
-if ( 'crowdfunding-for-woocommerce.php' === basename( __FILE__ ) ) {
-	// Check if Pro is active, if so then return
-	$plugin = 'crowdfunding-for-woocommerce-pro/crowdfunding-for-woocommerce-pro.php';
-	if (
-		in_array( $plugin, apply_filters( 'active_plugins', get_option( 'active_plugins', array() ) ) ) ||
-		( is_multisite() && array_key_exists( $plugin, get_site_option( 'active_sitewide_plugins', array() ) ) )
-	) return;
-}
-
 add_action( 'before_woocommerce_init', function() {
 	if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
-		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, false );
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__, false );
 	}
 } );
 
@@ -57,7 +51,7 @@ final class Alg_Woocommerce_Crowdfunding {
 	 * @var   string
 	 * @since 2.3.0
 	 */
-	public $version = '3.1.14';
+	public $version = '3.1.14.1';
 
 	/**
 	 * @var Alg_Woocommerce_Crowdfunding The single instance of the class
@@ -100,16 +94,6 @@ final class Alg_Woocommerce_Crowdfunding {
 		} else {
 			// Frontend
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-
-			if (
-				'yes' === get_option( 'alg_wc_crowdfunding_product_by_user_' . 'start_date' . '_enabled', 'no' ) ||
-				'yes' === get_option( 'alg_wc_crowdfunding_product_by_user_' . 'start_time' . '_enabled', 'no' ) ||
-				'yes' === get_option( 'alg_wc_crowdfunding_product_by_user_' . 'end_date'   . '_enabled', 'no' ) ||
-				'yes' === get_option( 'alg_wc_crowdfunding_product_by_user_' . 'end_time'   . '_enabled', 'no' )
-			) {
-				add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
-				add_action( 'init',               array( $this, 'register_admin_scripts' ) );
-			}
 		}
 	}
 			
@@ -177,13 +161,9 @@ final class Alg_Woocommerce_Crowdfunding {
 	 * @return  array
 	 */
 	function action_links( $links ) {
-		$settings   = array( '<a href="' . admin_url( 'admin.php?page=wc-settings&tab=alg_crowdfunding' ) . '">' .
-			__( 'Settings', 'woocommerce' ) . '</a>' );
-		$unlock_all = apply_filters( 'alg_crowdfunding_option', array(
-			'<a href="' . esc_url( 'https://wpwham.com/products/crowdfunding-for-woocommerce/?utm_source=plugins_page&utm_campaign=free&utm_medium=crowdfunding' ) . '">' .
-				__( 'Unlock all', 'crowdfunding-for-woocommerce' ) . '</a>',
-		), 'settings_array' );
-		return array_merge( $settings, $unlock_all, $links );
+		$settings = array( '<a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=alg_crowdfunding' ) ) . '">' .
+			esc_html__( 'Settings', 'woocommerce' ) . '</a>' );
+		return array_merge( $settings, $links );
 	}
 
 	/**
@@ -192,8 +172,6 @@ final class Alg_Woocommerce_Crowdfunding {
 	 * @version 3.0.0
 	 */
 	function includes() {
-		// Functions
-		require_once( 'includes/functions/wc-crowdfunding-functions-user-campaign-fields.php' );
 		// Product edit meta box etc.
 		require_once( 'includes/class-wc-crowdfunding-admin.php' );
 		// Core
@@ -209,14 +187,10 @@ final class Alg_Woocommerce_Crowdfunding {
 	 */
 	public static function add_settings_to_status_report() {
 		#region add_settings_to_status_report
-		$protected_settings      = array( 'wpwham_woocommerce_crowdfunding_license' );
 		$settings_general        = Alg_WC_Crowdfunding_Settings_General::get_settings();
 		$settings_product_info   = Alg_WC_Crowdfunding_Settings_Product_Info::get_settings();
 		$settings_open_pricing   = Alg_WC_Crowdfunding_Settings_Open_Pricing::get_settings();
-		$settings_user_campaigns = Alg_WC_Crowdfunding_Settings_Product_By_User::get_settings();
-		$settings = array_merge(
-			$settings_general, $settings_product_info, $settings_open_pricing, $settings_user_campaigns
-		);
+		$settings = array_merge( $settings_general, $settings_product_info, $settings_open_pricing );
 		?>
 		<table class="wc_status_table widefat" cellspacing="0">
 			<thead>
@@ -238,14 +212,11 @@ final class Alg_Woocommerce_Crowdfunding {
 					$title = $setting['id'];
 				}
 				$value = get_option( $setting['id'] ); 
-				if ( in_array( $setting['id'], $protected_settings ) ) {
-					$value = $value > '' ? '(set)' : 'not set';
-				}
 				?>
 				<tr>
 					<td data-export-label="<?php echo esc_attr( $title ); ?>"><?php esc_html_e( $title, 'crowdfunding-for-woocommerce' ); ?>:</td>
 					<td class="help">&nbsp;</td>
-					<td><?php echo is_array( $value ) ? print_r( $value, true ) : $value; ?></td>
+					<td><?php echo esc_html( is_array( $value ) ? wp_json_encode( $value ) : (string) $value ); ?></td>
 				</tr>
 				<?php endforeach; ?>
 			</tbody>
@@ -276,7 +247,6 @@ final class Alg_Woocommerce_Crowdfunding {
 		$this->settings['general']         = require_once( 'includes/settings/class-wc-crowdfunding-settings-general.php' );
 		$this->settings['product-info']    = require_once( 'includes/settings/class-wc-crowdfunding-settings-product-info.php' );
 		$this->settings['open-pricing']    = require_once( 'includes/settings/class-wc-crowdfunding-settings-open-pricing.php' );
-		$this->settings['product-by-user'] = require_once( 'includes/settings/class-wc-crowdfunding-settings-product-by-user.php' );
 		add_action( 'woocommerce_system_status_report', array( $this, 'add_settings_to_status_report' ) );
 
 		// Version updated
@@ -292,18 +262,10 @@ final class Alg_Woocommerce_Crowdfunding {
 	 * @since   2.7.0
 	 */
 	function version_updated() {
-		// Handling deprecated options
-		$deprecated_options = array(
-			'alg_wc_crowdfunding_product_by_user_message_product_successfully_added'  => 'alg_wc_crowdfunding_product_by_user_message_product_added',
-			'alg_wc_crowdfunding_product_by_user_message_product_successfully_edited' => 'alg_wc_crowdfunding_product_by_user_message_product_edited',
-		);
-		foreach ( $deprecated_options as $old_option => $new_option ) {
-			if ( false != ( $old_option_value = get_option( $old_option, false ) ) ) {
-				update_option( $new_option, $old_option_value );
-				delete_option( $old_option );
-			}
-		}
-		// Version update finished
+		// The maintained fork no longer registers the legacy My Account campaign endpoint.
+		// Flush rewrite rules once when upgrading so stale endpoint rules are removed.
+		flush_rewrite_rules( false );
+
 		update_option( 'alg_woocommerce_crowdfunding_version', $this->version );
 	}
 

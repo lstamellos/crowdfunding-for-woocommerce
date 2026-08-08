@@ -50,14 +50,14 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 	function language_shortcode( $atts, $content = '' ) {
 		// E.g.: `[crowdfunding_translate lang="DE" lang_text="Unterstütze dieses Projekt" not_lang_text="Back this project"]`
 		if ( isset( $atts['lang_text'] ) && isset( $atts['not_lang_text'] ) && ! empty( $atts['lang'] ) ) {
-			return ( ! defined( 'ICL_LANGUAGE_CODE' ) || ! in_array( strtolower( ICL_LANGUAGE_CODE ), array_map( 'trim', explode( ',', strtolower( $atts['lang'] ) ) ) ) ) ?
-				$atts['not_lang_text'] : $atts['lang_text'];
+			return wp_kses_post( ( ! defined( 'ICL_LANGUAGE_CODE' ) || ! in_array( strtolower( ICL_LANGUAGE_CODE ), array_map( 'trim', explode( ',', strtolower( $atts['lang'] ) ) ) ) ) ?
+				$atts['not_lang_text'] : $atts['lang_text'] );
 		}
 		// E.g.: `[crowdfunding_translate lang="DE"]Unterstütze dieses Projekt[/crowdfunding_translate][crowdfunding_translate lang="ES"]Patrocina este proyecto[/crowdfunding_translate][crowdfunding_translate not_lang="DE,ES"]Back this project[/crowdfunding_translate]`
 		return (
 			( ! empty( $atts['lang'] )     && ( ! defined( 'ICL_LANGUAGE_CODE' ) || ! in_array( strtolower( ICL_LANGUAGE_CODE ), array_map( 'trim', explode( ',', strtolower( $atts['lang'] ) ) ) ) ) ) ||
 			( ! empty( $atts['not_lang'] ) &&     defined( 'ICL_LANGUAGE_CODE' ) &&   in_array( strtolower( ICL_LANGUAGE_CODE ), array_map( 'trim', explode( ',', strtolower( $atts['not_lang'] ) ) ) ) )
-		) ? '' : $content;
+		) ? '' : wp_kses_post( $content );
 	}
 
 	/**
@@ -89,7 +89,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 			'fields'         => 'ids',
 		);
 		if ( isset( $atts['product_ids'] ) ) {
-			$args['post__in'] = array_map( 'trim', explode( ',', $atts['product_ids'] ) );
+			$args['post__in'] = array_values( array_filter( array_map( 'absint', explode( ',', $atts['product_ids'] ) ) ) );
 		}
 		$loop  = new WP_Query( $args );
 		$total = 0;
@@ -120,8 +120,8 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 		$output  = '';
 		$backers = alg_wc_crdfnd_get_product_orders_data( 'backers', $atts );
 		if ( ! empty( $backers ) ) {
-			$backer_template = ( isset( $atts['backer_template'] ) ? $atts['backer_template'] : '%nr%. %first_name% %last_name% - %sum%' );
-			$glue            = ( isset( $atts['glue'] )            ? $atts['glue']            : '<br>' );
+			$backer_template = wp_kses_post( isset( $atts['backer_template'] ) ? $atts['backer_template'] : '%nr%. %first_name% %last_name% - %sum%' );
+			$glue            = wp_kses_post( isset( $atts['glue'] ) ? $atts['glue'] : '<br>' );
 			$date_format     = ( isset( $atts['date_format'] )     ? $atts['date_format']     : get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) );
 			$output          = array();
 			$i               = 1;
@@ -133,12 +133,12 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 					if ( 'sum' === $key ) {
 						$replaced_values[ '%' . $key . '%' ] = wc_price( $value, array( 'currency' => $backer['order_currency'] ) );
 					} elseif ( 'order_date' === $key ) {
-						$replaced_values[ '%' . $key . '%' ] = date_i18n( $date_format, $value );
+						$replaced_values[ '%' . $key . '%' ] = esc_html( date_i18n( $date_format, $value ) );
 					} else {
-						$replaced_values[ '%' . $key . '%' ] = $value;
+						$replaced_values[ '%' . $key . '%' ] = esc_html( (string) $value );
 					}
 				}
-				$output[] = str_replace( array_keys( $replaced_values ), $replaced_values, $backer_template );
+				$output[] = wp_kses_post( str_replace( array_keys( $replaced_values ), $replaced_values, $backer_template ) );
 				$i++;
 			}
 			$output = implode( $glue, $output );
@@ -155,8 +155,12 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 	 * @todo    [dev] `remove_filter \ add_filter( 'wc_get_template', array( $this, 'change_variable_add_to_cart_template' ), PHP_INT_MAX, 5 );`
 	 */
 	function alg_product_crowdfunding_add_to_cart_form( $atts ) {
-		$the_product = isset( $atts['product_id'] )            ? wc_get_product( $atts['product_id'] ) : wc_get_product();
-		$return      = ( $the_product->is_type( 'variable' ) ) ? woocommerce_variable_add_to_cart()    : woocommerce_simple_add_to_cart();
+		$product_id  = $this->get_shortcode_product_id( $atts );
+		$the_product = $product_id ? wc_get_product( $product_id ) : wc_get_product();
+		if ( ! $the_product ) {
+			return '';
+		}
+		$return = ( $the_product->is_type( 'variable' ) ) ? woocommerce_variable_add_to_cart() : woocommerce_simple_add_to_cart();
 		return $return;
 	}
 
@@ -171,7 +175,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 			$atts = array();
 		}
 		if ( isset( $atts['type'] ) && 'percent' === $atts['type'] ) {
-			$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+			$product_id = $this->get_shortcode_product_id( $atts );
 			if ( ! $product_id ) {
 				return '';
 			}
@@ -191,7 +195,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 			$atts = array();
 		}
 		if ( isset( $atts['type'] ) && 'percent' === $atts['type'] ) {
-			$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+			$product_id = $this->get_shortcode_product_id( $atts );
 			if ( ! $product_id ) {
 				return '';
 			}
@@ -222,7 +226,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 			$atts = array();
 		}
 		if ( isset( $atts['type'] ) && 'percent' === $atts['type'] ) {
-			$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+			$product_id = $this->get_shortcode_product_id( $atts );
 			if ( ! $product_id ) {
 				return '';
 			}
@@ -251,7 +255,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 	 * @since   2.2.0
 	 */
 	function alg_product_crowdfunding_goal_items( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -265,7 +269,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 	 * @since   2.2.0
 	 */
 	function alg_product_crowdfunding_goal_backers( $atts ) {
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -282,7 +286,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 		if ( empty( $atts ) ) {
 			$atts = array();
 		}
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -300,7 +304,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 		if ( empty( $atts ) ) {
 			$atts = array();
 		}
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -320,7 +324,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 		if ( empty( $atts ) ) {
 			$atts = array();
 		}
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}
@@ -340,7 +344,7 @@ class Alg_WC_Crowdfunding_Shortcodes_General extends Alg_WC_Crowdfunding_Shortco
 		if ( empty( $atts ) ) {
 			$atts = array();
 		}
-		$product_id = isset( $atts['product_id'] ) ? $atts['product_id'] : get_the_ID();
+		$product_id = $this->get_shortcode_product_id( $atts );
 		if ( ! $product_id ) {
 			return '';
 		}

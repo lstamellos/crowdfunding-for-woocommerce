@@ -23,6 +23,13 @@ class Alg_WC_Crowdfunding_Shortcodes {
 	}
 
 	/**
+	 * Resolve and normalize a product ID supplied to a shortcode.
+	 */
+	protected function get_shortcode_product_id( $atts ) {
+		return isset( $atts['product_id'] ) ? absint( $atts['product_id'] ) : absint( get_the_ID() );
+	}
+
+	/**
 	 * output_shortcode.
 	 *
 	 * @version 2.7.0
@@ -45,18 +52,17 @@ class Alg_WC_Crowdfunding_Shortcodes {
 						$value = apply_filters( 'alg_crowdfunding_output_shortcode_price', wc_price( $value ), $value );
 						break;
 					case 'percent':
-						if ( 0 != $atts['total_value'] ) {
-							if ( ! isset( $atts['round_precision'] ) ) {
-								$atts['round_precision'] = 0;
-							}
-							$value = round( $value / $atts['total_value'] * 100, $atts['round_precision'] );
-						} else {
-							$value = 100;
-						}
+						$total_value     = isset( $atts['total_value'] ) && is_numeric( $atts['total_value'] ) ? (float) $atts['total_value'] : 0.0;
+						$round_precision = isset( $atts['round_precision'] ) ? min( 6, absint( $atts['round_precision'] ) ) : 0;
+						$numeric_value   = is_numeric( $value ) ? (float) $value : 0.0;
+						$value           = ( 0.0 !== $total_value ) ? round( $numeric_value / $total_value * 100, $round_precision ) : 100;
 						break;
 				}
 			}
-			return $atts['before'] . $value . $atts['after'];
+			$before = wp_kses_post( (string) $atts['before'] );
+			$after  = wp_kses_post( (string) $atts['after'] );
+
+			return $before . $value . $after;
 		}
 		return '';
 	}

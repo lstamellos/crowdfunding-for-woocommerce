@@ -74,59 +74,16 @@ class Alg_WC_Crowdfunding {
 			// Open Pricing
 			require_once( 'class-wc-crowdfunding-open-pricing.php' );
 
-			// My Account
-			require_once( 'class-wc-crowdfunding-my-account.php' );
-
 			// Shortcodes
 			require_once( 'shortcodes/class-wc-crowdfunding-shortcodes.php' );
 			require_once( 'shortcodes/class-wc-crowdfunding-shortcodes-general.php' );
 			require_once( 'shortcodes/class-wc-crowdfunding-shortcodes-time.php' );
 			require_once( 'shortcodes/class-wc-crowdfunding-shortcodes-progress-bar.php' );
-			require_once( 'shortcodes/class-wc-crowdfunding-shortcodes-products-add-form.php' );
 
 			// Crons
 			require_once( 'class-wc-crowdfunding-crons.php' );
 		}
 
-		register_activation_hook(   alg_wc_crowdfunding_get_file(), array( $this, 'add_my_products_endpoint_flush_rewrite_rules' ) );
-		register_deactivation_hook( alg_wc_crowdfunding_get_file(), array( $this, 'add_my_products_endpoint_flush_rewrite_rules' ) );
-		add_filter( 'query_vars',                                   array( $this, 'add_my_products_endpoint_query_var' ), 0 );
-		add_action( 'init',                                         array( $this, 'add_my_products_endpoint' ) );
-	}
-
-	/**
-	 * Flush rewrite rules on plugin activation.
-	 *
-	 * @version 2.3.1
-	 * @since   2.3.1
-	 */
-	function add_my_products_endpoint_flush_rewrite_rules() {
-		add_rewrite_endpoint( 'crowdfunding-campaigns', EP_ROOT | EP_PAGES );
-		flush_rewrite_rules();
-	}
-
-	/**
-	 * Add new query var.
-	 *
-	 * @version 2.3.1
-	 * @since   2.3.1
-	 * @param   array $vars
-	 * @return  array
-	 */
-	function add_my_products_endpoint_query_var( $vars ) {
-		$vars[] = 'crowdfunding-campaigns';
-		return $vars;
-	}
-
-	/**
-	 * Register new endpoint to use inside My Account page.
-	 *
-	 * @version 2.3.1
-	 * @since   2.3.1
-	 * @see     https://developer.wordpress.org/reference/functions/add_rewrite_endpoint/
-	 */
-	function add_my_products_endpoint() {
-		add_rewrite_endpoint( 'crowdfunding-campaigns', EP_ROOT | EP_PAGES );
 	}
 
 	/**

@@ -36,6 +36,20 @@ function omni_cf_coexist_reset_cart() {
     $_REQUEST = array();
 }
 
+function omni_cf_coexist_notices_text() {
+    $notices = wc_get_notices();
+    $parts   = array();
+
+    foreach ( $notices as $type => $items ) {
+        foreach ( $items as $item ) {
+            $message = isset( $item['notice'] ) ? wp_strip_all_tags( $item['notice'] ) : '';
+            $parts[] = $type . ': ' . $message;
+        }
+    }
+
+    return implode( ' | ', $parts );
+}
+
 function omni_cf_coexist_classic_add_to_cart( $product_id, array $posted_fields ) {
     omni_cf_coexist_reset_cart();
 
@@ -67,6 +81,23 @@ function omni_cf_coexist_render_before_add_to_cart( $product ) {
     return $html;
 }
 
+function omni_cf_coexist_extract_input_name( $html, $needle ) {
+    if ( ! preg_match_all( '/<input\b[^>]*>/i', $html, $matches ) ) {
+        return '';
+    }
+
+    foreach ( $matches[0] as $input ) {
+        if ( false === strpos( $input, $needle ) ) {
+            continue;
+        }
+        if ( preg_match( '/\bname=["\']([^"\']+)["\']/i', $input, $name_match ) ) {
+            return html_entity_decode( $name_match[1], ENT_QUOTES, 'UTF-8' );
+        }
+    }
+
+    return '';
+}
+
 function omni_cf_coexist_find_product_open_pricing_version() {
     if ( ! function_exists( 'get_plugins' ) ) {
         require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -81,11 +112,6 @@ function omni_cf_coexist_find_product_open_pricing_version() {
     return '';
 }
 
-/**
- * The WP Wham plugin has used alg_wc_product_open_pricing_* product meta
- * throughout the supported lineage. Keep the fixture explicit so the test
- * exercises its public/runtime behavior rather than mocking its callbacks.
- */
 function omni_cf_coexist_enable_wpwham_open_pricing( $product_id ) {
     update_option( 'alg_wc_product_open_pricing_enabled', 'yes' );
 
@@ -150,7 +176,7 @@ try {
     clean_post_cache( $wpwham_product_id );
     clean_post_cache( $crowdfunding_product_id );
 
-    $wpwham_product      = wc_get_product( $wpwham_product_id );
+    $wpwham_product       = wc_get_product( $wpwham_product_id );
     $crowdfunding_product = wc_get_product( $crowdfunding_product_id );
 
     // Frontend namespaces must remain isolated.
@@ -164,6 +190,12 @@ try {
         'Crowdfunding amount field must not render on the Product Open Pricing product.'
     );
 
+    $wpwham_input_name = omni_cf_coexist_extract_input_name( $wpwham_html, 'alg_open_price' );
+    omni_cf_coexist_assert(
+        '' !== $wpwham_input_name,
+        'Product Open Pricing rendered input must expose a POST field name.'
+    );
+
     $crowdfunding_html = omni_cf_coexist_render_before_add_to_cart( $crowdfunding_product );
     omni_cf_coexist_assert(
         false !== strpos( $crowdfunding_html, 'alg_crowdfunding_open_price' ),
@@ -174,12 +206,15 @@ try {
         'Product Open Pricing amount field must not render on the crowdfunding-only product.'
     );
 
-    // Product A: WP Wham plugin must own the selected price and crowdfunding must stay out.
+    // Product A: submit the exact field contract rendered by WP Wham 1.7.4.
     $wpwham_cart = omni_cf_coexist_classic_add_to_cart(
         $wpwham_product_id,
-        array( 'alg_open_price' => '7.50' )
+        array( $wpwham_input_name => '7.50' )
     );
-    omni_cf_coexist_assert( 1 === count( $wpwham_cart ), 'Product Open Pricing product must add to cart.' );
+    omni_cf_coexist_assert(
+        1 === count( $wpwham_cart ),
+        'Product Open Pricing product must add to cart; input=' . $wpwham_input_name . '; notices=' . omni_cf_coexist_notices_text()
+    );
     $wpwham_item = reset( $wpwham_cart );
     omni_cf_coexist_assert( isset( $wpwham_item['alg_open_price'] ), 'WP Wham cart item must retain alg_open_price.' );
     omni_cf_coexist_assert( ! isset( $wpwham_item['alg_crowdfunding_open_price'] ), 'Crowdfunding cart key must not leak into WP Wham product.' );

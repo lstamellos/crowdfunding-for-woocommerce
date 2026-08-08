@@ -86,7 +86,7 @@ try {
     $input_html = $input_match[0];
     omni_cf_assert( 1 === preg_match( '/\bmin="3(?:\.0+)?"/i', $input_html ), 'Rendered input must enforce minimum 3.' );
     omni_cf_assert( 1 === preg_match( '/\bvalue="10(?:\.0+)?"/i', $input_html ), 'Rendered input must use default 10.' );
-    omni_cf_assert( false === preg_match( '/\bmax=/i', $input_html ), 'Rendered input must not invent a maximum.' );
+    omni_cf_assert( 0 === preg_match( '/\bmax=/i', $input_html ), 'Rendered input must not invent a maximum.' );
     omni_cf_assert( false !== strpos( $input_html, 'step="0.01"' ), 'Rendered input must allow cent precision.' );
 
     // Missing amount must be rejected by the real WC_Cart add-to-cart pipeline.

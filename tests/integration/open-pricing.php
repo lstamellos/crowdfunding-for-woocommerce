@@ -28,13 +28,38 @@ function omni_cf_reset_cart() {
         WC()->cart->empty_cart( true );
     }
     wc_clear_notices();
-    $_POST = array();
+    $_POST    = array();
+    $_REQUEST = array();
+}
+
+/**
+ * Submit the same classic simple-product request path handled by WC_Form_Handler.
+ *
+ * The plugin deliberately disables AJAX add-to-cart for crowdfunding open-price
+ * products, so this is the production path supported by the fork.
+ */
+function omni_cf_classic_add_to_cart( $product_id, $has_open_price = false, $open_price = null ) {
+    omni_cf_reset_cart();
+
+    $_REQUEST['add-to-cart'] = (string) $product_id;
+    $_REQUEST['quantity']    = '1';
+    $_POST['add-to-cart']    = (string) $product_id;
+    $_POST['quantity']       = '1';
+
+    if ( $has_open_price ) {
+        $_POST['alg_crowdfunding_open_price'] = $open_price;
+    }
+
+    WC_Form_Handler::add_to_cart_action( false );
+
+    return WC()->cart->get_cart();
 }
 
 omni_cf_assert( defined( 'WC_VERSION' ), 'WooCommerce must be active.' );
 omni_cf_assert( '11.0.0' === WC_VERSION, 'Integration environment must use WooCommerce 11.0.0.' );
 omni_cf_assert( class_exists( 'Alg_Woocommerce_Crowdfunding' ), 'Crowdfunding plugin must be active.' );
 omni_cf_assert( class_exists( 'Alg_Crowdfunding_Product_Open_Pricing' ), 'Crowdfunding open-pricing class must be loaded.' );
+omni_cf_assert( class_exists( 'WC_Form_Handler' ), 'WooCommerce classic form handler must be available.' );
 
 update_option( 'alg_woocommerce_crowdfunding_enabled', 'yes' );
 update_option( 'alg_crowdfunding_open_price_hide_original_price', 'yes' );
@@ -89,43 +114,34 @@ try {
     omni_cf_assert( 0 === preg_match( '/\bmax=/i', $input_html ), 'Rendered input must not invent a maximum.' );
     omni_cf_assert( false !== strpos( $input_html, 'step="0.01"' ), 'Rendered input must allow cent precision.' );
 
-    // Missing amount must be rejected by the real WC_Cart add-to-cart pipeline.
-    omni_cf_reset_cart();
-    $missing_key = WC()->cart->add_to_cart( $product_id, 1 );
-    omni_cf_assert( false === $missing_key, 'Missing open price must be rejected.' );
+    // Missing amount must be rejected by the real classic form-handler path.
+    $missing_cart = omni_cf_classic_add_to_cart( $product_id );
+    omni_cf_assert( 0 === count( $missing_cart ), 'Missing open price must be rejected.' );
     omni_cf_assert( wc_notice_count( 'error' ) > 0, 'Missing open price must create a WooCommerce error notice.' );
 
     // Amount below configured minimum must be rejected.
-    omni_cf_reset_cart();
-    $_POST['alg_crowdfunding_open_price'] = '2.99';
-    $below_min_key = WC()->cart->add_to_cart( $product_id, 1 );
-    omni_cf_assert( false === $below_min_key, 'Price below 3 must be rejected.' );
+    $below_min_cart = omni_cf_classic_add_to_cart( $product_id, true, '2.99' );
+    omni_cf_assert( 0 === count( $below_min_cart ), 'Price below 3 must be rejected.' );
     omni_cf_assert( wc_notice_count( 'error' ) > 0, 'Below-minimum price must create a WooCommerce error notice.' );
 
     // Malformed and negative values must be rejected.
-    omni_cf_reset_cart();
-    $_POST['alg_crowdfunding_open_price'] = array( '10' );
-    omni_cf_assert( false === WC()->cart->add_to_cart( $product_id, 1 ), 'Array-shaped open price must be rejected.' );
+    $array_cart = omni_cf_classic_add_to_cart( $product_id, true, array( '10' ) );
+    omni_cf_assert( 0 === count( $array_cart ), 'Array-shaped open price must be rejected.' );
 
-    omni_cf_reset_cart();
-    $_POST['alg_crowdfunding_open_price'] = '-1';
-    omni_cf_assert( false === WC()->cart->add_to_cart( $product_id, 1 ), 'Negative open price must be rejected.' );
+    $negative_cart = omni_cf_classic_add_to_cart( $product_id, true, '-1' );
+    omni_cf_assert( 0 === count( $negative_cart ), 'Negative open price must be rejected.' );
 
     // Exact minimum is valid.
-    omni_cf_reset_cart();
-    $_POST['alg_crowdfunding_open_price'] = '3';
-    $minimum_key = WC()->cart->add_to_cart( $product_id, 1 );
-    omni_cf_assert( is_string( $minimum_key ) && '' !== $minimum_key, 'Configured minimum 3 must be accepted.' );
-    $minimum_item = WC()->cart->get_cart_item( $minimum_key );
+    $minimum_cart = omni_cf_classic_add_to_cart( $product_id, true, '3' );
+    omni_cf_assert( 1 === count( $minimum_cart ), 'Configured minimum 3 must be accepted.' );
+    $minimum_item = reset( $minimum_cart );
     omni_cf_assert_float( 3.0, $minimum_item['data']->get_price(), 'Minimum selected price must be applied to cart product.' );
 
     // A normal decimal contribution must flow through cart item data and totals.
-    omni_cf_reset_cart();
-    $_POST['alg_crowdfunding_open_price'] = '12.34';
-    $cart_item_key = WC()->cart->add_to_cart( $product_id, 1 );
-    omni_cf_assert( is_string( $cart_item_key ) && '' !== $cart_item_key, 'Valid decimal open price must add the product to cart.' );
+    $decimal_cart = omni_cf_classic_add_to_cart( $product_id, true, '12.34' );
+    omni_cf_assert( 1 === count( $decimal_cart ), 'Valid decimal open price must add the product to cart.' );
 
-    $cart_item = WC()->cart->get_cart_item( $cart_item_key );
+    $cart_item = reset( $decimal_cart );
     omni_cf_assert( isset( $cart_item['alg_crowdfunding_open_price'] ), 'Cart item must retain canonical crowdfunding open-price data.' );
     omni_cf_assert_float( 12.34, $cart_item['alg_crowdfunding_open_price'], 'Cart item data must retain selected amount.' );
     omni_cf_assert_float( 12.34, $cart_item['data']->get_price(), 'WC_Product price must equal selected open price.' );
@@ -134,11 +150,10 @@ try {
     omni_cf_assert_float( 12.34, WC()->cart->get_cart_contents_total(), 'Cart contents total must equal selected contribution.' );
 
     // No configured maximum means ordinary higher values remain valid.
-    omni_cf_reset_cart();
-    $_POST['alg_crowdfunding_open_price'] = '100';
-    $higher_key = WC()->cart->add_to_cart( $product_id, 1 );
-    omni_cf_assert( is_string( $higher_key ) && '' !== $higher_key, 'No-max campaign must accept a higher valid amount.' );
-    omni_cf_assert_float( 100.0, WC()->cart->get_cart_item( $higher_key )['data']->get_price(), 'Higher selected price must be applied.' );
+    $higher_cart = omni_cf_classic_add_to_cart( $product_id, true, '100' );
+    omni_cf_assert( 1 === count( $higher_cart ), 'No-max campaign must accept a higher valid amount.' );
+    $higher_item = reset( $higher_cart );
+    omni_cf_assert_float( 100.0, $higher_item['data']->get_price(), 'Higher selected price must be applied.' );
 
     // Session restoration must reapply the canonical amount through WC_Product::set_price().
     $restored_product = wc_get_product( $product_id );

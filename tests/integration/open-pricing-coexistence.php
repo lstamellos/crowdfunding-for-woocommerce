@@ -125,7 +125,7 @@ function omni_cf_coexist_enable_wpwham_open_pricing( $product_id ) {
 }
 
 omni_cf_coexist_assert( defined( 'WC_VERSION' ), 'WooCommerce must be active.' );
-omni_cf_coexist_assert( '11.0.0' === WC_VERSION, 'Integration environment must use WooCommerce 11.0.0.' );
+omni_cf_coexist_assert( '11.0.1' === WC_VERSION, 'Integration environment must use WooCommerce 11.0.1.' );
 omni_cf_coexist_assert( class_exists( 'Alg_Woocommerce_Crowdfunding' ), 'Crowdfunding fork must be active.' );
 omni_cf_coexist_assert( class_exists( 'WC_Form_Handler' ), 'WooCommerce classic form handler must be available.' );
 omni_cf_coexist_assert(

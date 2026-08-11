@@ -4,7 +4,7 @@ Tags: woocommerce, crowdfunding
 Requires at least: 6.8
 Requires PHP: 8.3
 Tested up to: 7.0
-Stable tag: 3.1.14.1
+Stable tag: 3.1.14.2
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -32,11 +32,15 @@ Existing `alg_*` options and `_alg_crowdfunding_*` product metadata are preserve
 
 = Compatibility =
 
-HPOS is deliberately declared incompatible in 3.1.14.1 because the upstream order-discovery layer still queries `shop_order` posts directly. HPOS support will only be enabled after the order-query layer is migrated to WooCommerce CRUD APIs and parity-tested.
+HPOS remains deliberately declared incompatible because the upstream order-discovery layer still queries `shop_order` posts directly. HPOS support will only be enabled after the order-query layer is migrated to WooCommerce CRUD APIs and parity-tested.
 
-Cart and Checkout Blocks are also deliberately declared incompatible until Store API / Blocks behavior is implemented and tested. Classic WooCommerce cart and checkout are the current target.
+Classic WooCommerce cart/checkout and Cart/Checkout Blocks are supported. The Blocks path uses WooCommerce Store API integration so the crowdfunding open-price value is validated, retained in cart data, applied to cart totals and persisted to the order.
 
-The crowdfunding open-price path is integration-tested against WordPress 7.0.3 and WooCommerce 11.0.0, including coexistence with Product Open Pricing (Name Your Price) for WooCommerce 1.7.4 on a separate product.
+Cross-surface behavior is also covered: a contribution entered through the classic WooCommerce product form can continue through a Cart or Checkout Block without losing the selected amount.
+
+TagDiv Composer / Newspaper layouts are supported when they render the native WooCommerce classic checkout surface or native WooCommerce Cart/Checkout Blocks. The OmniaTV production configuration was audited to confirm that TagDiv acts as the page/template rendering layer and does not replace WooCommerce checkout with a separate checkout engine.
+
+The crowdfunding open-price path is integration-tested against WordPress 7.0.3 and WooCommerce 11.0.1, including coexistence with Product Open Pricing (Name Your Price) for WooCommerce 1.7.4 on a separate product.
 
 = Public Shortcodes =
 
@@ -81,6 +85,16 @@ Other:
 4. Create or edit crowdfunding products from WooCommerce administration only.
 
 == Changelog ==
+
+= 3.1.14.2 - 2026-08-12 =
+* COMPAT: Add WooCommerce Store API handling for crowdfunding open-price cart data.
+* COMPAT: Declare Cart and Checkout Blocks compatible after integration testing.
+* COMPAT: Preserve selected crowdfunding contribution amounts from Store API add-to-cart through Cart/Checkout Blocks and into WooCommerce orders.
+* COMPAT: Preserve selected amounts across the classic product-form to Block checkout bridge.
+* COMPAT: Support TagDiv Composer / Newspaper checkout pages when they render native WooCommerce classic checkout or Cart/Checkout Blocks.
+* TEST: Validate classic checkout order persistence, Store API Cart/Checkout Block order persistence, and classic-to-Block checkout against WordPress 7.0.3 and WooCommerce 11.0.1.
+* TEST: Revalidate coexistence with Product Open Pricing (Name Your Price) for WooCommerce 1.7.4.
+* COMPAT: HPOS remains explicitly unsupported pending WooCommerce CRUD order-query migration and parity testing.
 
 = 3.1.14.1 - 2026-08-08 =
 * SECURITY: Restrict progress-bar shortcodes to a fixed, escaped attribute schema and remove the attribute-injection path reported as CVE-2025-5767.

@@ -63,7 +63,7 @@ function omni_cf_blocks_response_array( $response ) {
 }
 
 omni_cf_blocks_assert( defined( 'WC_VERSION' ), 'WooCommerce must be active.' );
-omni_cf_blocks_assert( '11.0.0' === WC_VERSION, 'Integration environment must use WooCommerce 11.0.0.' );
+omni_cf_blocks_assert( '11.0.1' === WC_VERSION, 'Integration environment must use WooCommerce 11.0.1.' );
 omni_cf_blocks_assert( class_exists( 'Alg_Woocommerce_Crowdfunding' ), 'Crowdfunding fork must be active.' );
 omni_cf_blocks_assert( class_exists( 'Alg_Crowdfunding_Product_Open_Pricing' ), 'Crowdfunding open-pricing class must be loaded.' );
 omni_cf_blocks_assert( class_exists( '\\Automattic\\WooCommerce\\Utilities\\FeaturesUtil' ), 'WooCommerce FeaturesUtil must be available.' );

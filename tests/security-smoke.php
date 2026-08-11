@@ -133,11 +133,14 @@ $_POST = array();
 $notices = array();
 assert_true( false === $open_pricing->validate_open_price_on_add_to_cart( true, 42 ), 'Missing open price must fail for an open-price campaign.' );
 
-
 $repo_root = realpath( __DIR__ . '/..' );
 $main_source = file_get_contents( $repo_root . '/crowdfunding-for-woocommerce.php' );
 assert_true( false !== strpos( $main_source, "declare_compatibility( 'custom_order_tables', __FILE__, false )" ), 'HPOS must stay explicitly incompatible until integration-tested.' );
-assert_true( false !== strpos( $main_source, "declare_compatibility( 'cart_checkout_blocks', __FILE__, false )" ), 'Cart/Checkout Blocks must stay explicitly incompatible until integration-tested.' );
+assert_true( false !== strpos( $main_source, "declare_compatibility( 'cart_checkout_blocks', __FILE__, true )" ), 'Cart/Checkout Blocks compatibility must stay explicitly declared after Store API integration coverage.' );
+
+$open_pricing_source = file_get_contents( $repo_root . '/includes/class-wc-crowdfunding-open-pricing.php' );
+assert_true( false !== strpos( $open_pricing_source, 'woocommerce_store_api_add_to_cart_data' ), 'Store API amount capture hook must remain registered.' );
+assert_true( false !== strpos( $open_pricing_source, 'woocommerce_store_api_validate_add_to_cart' ), 'Native Store API validation hook must remain registered.' );
 
 $removed_files = array(
     'includes/class-wc-crowdfunding-my-account.php',

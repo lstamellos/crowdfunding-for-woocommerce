@@ -59,7 +59,7 @@ jobs:
           sudo mv /tmp/wp-cli.phar /usr/local/bin/wp
           wp --info
 
-      - name: Install WordPress 7.0.3 and WooCommerce 11.0.0
+      - name: Install WordPress 7.0.3 and WooCommerce 11.0.1
         run: |
           mkdir -p "$WP_PATH"
           wp core download --version=7.0.3 --path="$WP_PATH" --force
@@ -80,14 +80,26 @@ jobs:
             --skip-email
           wp plugin install woocommerce \
             --path="$WP_PATH" \
-            --version=11.0.0 \
+            --version=11.0.1 \
             --activate
           ln -s "$GITHUB_WORKSPACE" "$WP_PATH/wp-content/plugins/crowdfunding-for-woocommerce"
           wp plugin activate crowdfunding-for-woocommerce --path="$WP_PATH"
           wp --path="$WP_PATH" eval 'echo "WordPress " . get_bloginfo("version") . "; WooCommerce " . WC_VERSION . PHP_EOL;'
 
+      - name: Enable integration payment gateway
+        run: |
+          wp --path="$WP_PATH" option update woocommerce_bacs_settings \
+            '{"enabled":"yes","title":"Direct bank transfer","description":"","instructions":""}' \
+            --format=json
+
       - name: Crowdfunding open pricing integration
         run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/open-pricing.php"
+
+      - name: Cart and Checkout Blocks integration
+        run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/cart-checkout-blocks.php"
+
+      - name: Classic product form to Block checkout integration
+        run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/classic-to-block-checkout.php"
 
       - name: Install Product Open Pricing 1.7.4
         run: |

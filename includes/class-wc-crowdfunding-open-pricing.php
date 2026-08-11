@@ -4,7 +4,7 @@
  *
  * The WooCommerce Crowdfunding Product Open Pricing class.
  *
- * @version 3.0.2
+ * @version 3.1.14.2
  * @since   2.2.0
  * @author  Algoritmika Ltd.
  */
@@ -18,7 +18,7 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 	/**
 	 * Constructor.
 	 *
-	 * @version 3.0.2
+	 * @version 3.1.14.2
 	 * @since   2.2.0
 	 */
 	function __construct() {
@@ -36,7 +36,9 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 			add_filter( 'woocommerce_product_add_to_cart_text',  array( $this, 'add_to_cart_text' ), PHP_INT_MAX, 2 );
 		}
 		add_action( 'woocommerce_before_add_to_cart_button',     array( $this, 'add_open_price_input_field_to_frontend' ), PHP_INT_MAX );
+		add_filter( 'woocommerce_store_api_add_to_cart_data',   array( $this, 'add_open_price_to_store_api_add_to_cart_data' ), PHP_INT_MAX, 2 );
 		add_filter( 'woocommerce_add_to_cart_validation',        array( $this, 'validate_open_price_on_add_to_cart' ), PHP_INT_MAX, 6 );
+		add_action( 'woocommerce_store_api_validate_add_to_cart', array( $this, 'validate_store_api_open_price_on_add_to_cart' ), PHP_INT_MAX, 2 );
 		add_filter( 'woocommerce_add_cart_item_data',            array( $this, 'add_open_price_to_cart_item_data' ), PHP_INT_MAX, 3 );
 		add_filter( 'woocommerce_add_cart_item',                 array( $this, 'add_open_price_to_cart_item' ), PHP_INT_MAX, 2 );
 		add_filter( 'woocommerce_get_cart_item_from_session',    array( $this, 'get_cart_item_open_price_from_session' ), PHP_INT_MAX, 3 );
@@ -135,9 +137,41 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 	}
 
 	/**
+	 * Copy the crowdfunding amount from a Store API add-item request into the
+	 * cart item data that CartController persists and validates.
+	 *
+	 * @since 3.1.14.2
+	 *
+	 * @param array           $add_to_cart_data Add-to-cart request data.
+	 * @param WP_REST_Request $request          Store API request.
+	 * @return array
+	 */
+	function add_open_price_to_store_api_add_to_cart_data( $add_to_cart_data, $request ) {
+		$product_id = isset( $add_to_cart_data['id'] ) ? absint( $add_to_cart_data['id'] ) : 0;
+		$product    = $product_id ? wc_get_product( $product_id ) : false;
+
+		if ( ! $product || ! $this->is_open_price_product( $product ) ) {
+			return $add_to_cart_data;
+		}
+
+		if ( ! $request instanceof WP_REST_Request || ! $request->has_param( 'alg_crowdfunding_open_price' ) ) {
+			return $add_to_cart_data;
+		}
+
+		if ( ! isset( $add_to_cart_data['cart_item_data'] ) || ! is_array( $add_to_cart_data['cart_item_data'] ) ) {
+			$add_to_cart_data['cart_item_data'] = array();
+		}
+
+		$add_to_cart_data['cart_item_data']['alg_crowdfunding_open_price'] =
+			$request->get_param( 'alg_crowdfunding_open_price' );
+
+		return $add_to_cart_data;
+	}
+
+	/**
 	 * validate_open_price_on_add_to_cart.
 	 *
-	 * @version 3.0.0
+	 * @version 3.1.14.2
 	 * @since   2.2.0
 	 */
 	function validate_open_price_on_add_to_cart( $passed, $product_id, $quantity = 1, $variation_id = 0, $variations = array(), $cart_item_data = array() ) {
@@ -150,37 +184,11 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 			return $passed;
 		}
 
-		$open_price = $this->get_submitted_open_price();
-		if ( null === $open_price || '' === $open_price ) {
-			wc_add_notice(
-				get_option( 'alg_crowdfunding_product_open_price_messages_required', __( 'Price is required!', 'crowdfunding-for-woocommerce' ) ),
-				'error'
-			);
-			return false;
-		}
+		$open_price = $this->get_submitted_open_price( $cart_item_data );
+		$error      = $this->get_open_price_validation_error( $open_price, $the_product );
 
-		if ( false === $open_price ) {
-			wc_add_notice( __( 'Please enter a valid price.', 'crowdfunding-for-woocommerce' ), 'error' );
-			return false;
-		}
-
-		$_product_id = alg_wc_crdfnd_get_product_id_or_variation_parent_id( $the_product );
-		$min_price   = $this->normalize_open_price( get_post_meta( $_product_id, '_alg_crowdfunding_product_open_price_min_price', true ), true );
-		$max_price   = $this->normalize_open_price( get_post_meta( $_product_id, '_alg_crowdfunding_product_open_price_max_price', true ), true );
-
-		if ( false !== $min_price && '' !== $min_price && (float) $open_price < (float) $min_price ) {
-			wc_add_notice(
-				get_option( 'alg_crowdfunding_product_open_price_messages_to_small', __( 'Price is too low!', 'crowdfunding-for-woocommerce' ) ),
-				'error'
-			);
-			return false;
-		}
-
-		if ( false !== $max_price && '' !== $max_price && (float) $max_price > 0 && (float) $open_price > (float) $max_price ) {
-			wc_add_notice(
-				get_option( 'alg_crowdfunding_product_open_price_messages_to_big', __( 'Price is too high!', 'crowdfunding-for-woocommerce' ) ),
-				'error'
-			);
+		if ( '' !== $error ) {
+			wc_add_notice( $error, 'error' );
 			return false;
 		}
 
@@ -188,11 +196,104 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 	}
 
 	/**
+	 * Native Store API validation for Cart/Checkout Blocks.
+	 *
+	 * This complements the legacy woocommerce_add_to_cart_validation hook used
+	 * by classic WooCommerce. Store API requests should throw an exception
+	 * rather than depend on WooCommerce notices.
+	 *
+	 * @since 3.1.14.2
+	 *
+	 * @param WC_Product $product Product being added.
+	 * @param array      $request Normalized Store API add-to-cart request.
+	 * @throws Exception When the submitted amount is invalid.
+	 */
+	function validate_store_api_open_price_on_add_to_cart( $product, $request ) {
+		if ( ! $product || ! $this->is_open_price_product( $product ) ) {
+			return;
+		}
+
+		$cart_item_data = isset( $request['cart_item_data'] ) && is_array( $request['cart_item_data'] )
+			? $request['cart_item_data']
+			: array();
+		$open_price     = $this->get_submitted_open_price( $cart_item_data );
+		$error          = $this->get_open_price_validation_error( $open_price, $product );
+
+		if ( '' === $error ) {
+			return;
+		}
+
+		if ( class_exists( '\Automattic\WooCommerce\StoreApi\Exceptions\RouteException' ) ) {
+			throw new \Automattic\WooCommerce\StoreApi\Exceptions\RouteException(
+				'crowdfunding_invalid_open_price',
+				$error,
+				400
+			);
+		}
+
+		throw new Exception( $error );
+	}
+
+	/**
+	 * Return the validation message for a normalized open price.
+	 *
+	 * @param string|false|null $open_price  Normalized submitted amount.
+	 * @param WC_Product        $the_product Product being purchased.
+	 * @return string Empty string when valid.
+	 */
+	private function get_open_price_validation_error( $open_price, $the_product ) {
+		if ( null === $open_price || '' === $open_price ) {
+			return get_option(
+				'alg_crowdfunding_product_open_price_messages_required',
+				__( 'Price is required!', 'crowdfunding-for-woocommerce' )
+			);
+		}
+
+		if ( false === $open_price ) {
+			return __( 'Please enter a valid price.', 'crowdfunding-for-woocommerce' );
+		}
+
+		$_product_id = alg_wc_crdfnd_get_product_id_or_variation_parent_id( $the_product );
+		$min_price   = $this->normalize_open_price(
+			get_post_meta( $_product_id, '_alg_crowdfunding_product_open_price_min_price', true ),
+			true
+		);
+		$max_price   = $this->normalize_open_price(
+			get_post_meta( $_product_id, '_alg_crowdfunding_product_open_price_max_price', true ),
+			true
+		);
+
+		if ( false !== $min_price && '' !== $min_price && (float) $open_price < (float) $min_price ) {
+			return get_option(
+				'alg_crowdfunding_product_open_price_messages_to_small',
+				__( 'Price is too low!', 'crowdfunding-for-woocommerce' )
+			);
+		}
+
+		if ( false !== $max_price && '' !== $max_price && (float) $max_price > 0 && (float) $open_price > (float) $max_price ) {
+			return get_option(
+				'alg_crowdfunding_product_open_price_messages_to_big',
+				__( 'Price is too high!', 'crowdfunding-for-woocommerce' )
+			);
+		}
+
+		return '';
+	}
+
+	/**
 	 * Return a normalized submitted open price.
 	 *
+	 * Store API requests carry the amount through cart_item_data, while classic
+	 * product forms submit it through POST.
+	 *
+	 * @param array $cart_item_data Optional Store API/cart item request data.
 	 * @return string|false|null Null means missing, false means invalid.
 	 */
-	private function get_submitted_open_price() {
+	private function get_submitted_open_price( $cart_item_data = array() ) {
+		if ( array_key_exists( 'alg_crowdfunding_open_price', $cart_item_data ) ) {
+			return $this->normalize_open_price( $cart_item_data['alg_crowdfunding_open_price'], true );
+		}
+
 		if ( ! isset( $_POST['alg_crowdfunding_open_price'] ) ) {
 			return null;
 		}
@@ -255,13 +356,13 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 	/**
 	 * add_open_price_to_cart_item_data.
 	 *
-	 * @version 2.2.0
+	 * @version 3.1.14.2
 	 * @since   2.2.0
 	 */
 	function add_open_price_to_cart_item_data( $cart_item_data, $product_id, $variation_id ) {
 		$the_product = wc_get_product( $variation_id ? $variation_id : $product_id );
 		if ( $the_product && $this->is_open_price_product( $the_product ) ) {
-			$open_price = $this->get_submitted_open_price();
+			$open_price = $this->get_submitted_open_price( $cart_item_data );
 			if ( is_string( $open_price ) && '' !== $open_price ) {
 				$cart_item_data['alg_crowdfunding_open_price'] = $open_price;
 			}

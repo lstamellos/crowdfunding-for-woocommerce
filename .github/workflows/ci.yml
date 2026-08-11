@@ -86,6 +86,12 @@ jobs:
           wp plugin activate crowdfunding-for-woocommerce --path="$WP_PATH"
           wp --path="$WP_PATH" eval 'echo "WordPress " . get_bloginfo("version") . "; WooCommerce " . WC_VERSION . PHP_EOL;'
 
+      - name: Enable integration payment gateway
+        run: |
+          wp --path="$WP_PATH" option update woocommerce_bacs_settings \
+            '{"enabled":"yes","title":"Direct bank transfer","description":"","instructions":""}' \
+            --format=json
+
       - name: Crowdfunding open pricing integration
         run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/open-pricing.php"
 

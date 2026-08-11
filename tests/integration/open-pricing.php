@@ -60,6 +60,7 @@ omni_cf_assert( '11.0.0' === WC_VERSION, 'Integration environment must use WooCo
 omni_cf_assert( class_exists( 'Alg_Woocommerce_Crowdfunding' ), 'Crowdfunding plugin must be active.' );
 omni_cf_assert( class_exists( 'Alg_Crowdfunding_Product_Open_Pricing' ), 'Crowdfunding open-pricing class must be loaded.' );
 omni_cf_assert( class_exists( 'WC_Form_Handler' ), 'WooCommerce classic form handler must be available.' );
+omni_cf_assert( class_exists( 'WC_Checkout' ), 'WooCommerce classic checkout class must be available.' );
 
 update_option( 'alg_woocommerce_crowdfunding_enabled', 'yes' );
 update_option( 'alg_crowdfunding_open_price_hide_original_price', 'yes' );
@@ -75,9 +76,13 @@ $product->set_status( 'publish' );
 $product->set_catalog_visibility( 'visible' );
 $product->set_regular_price( '10' );
 $product->set_price( '10' );
+$product->set_virtual( true );
+$product->set_tax_status( 'none' );
 $product_id = $product->save();
 
 omni_cf_assert( $product_id > 0, 'Fixture product must be created.' );
+
+$classic_order_id = 0;
 
 try {
     update_post_meta( $product_id, '_alg_crowdfunding_enabled', 'yes' );
@@ -149,6 +154,35 @@ try {
     WC()->cart->calculate_totals();
     omni_cf_assert_float( 12.34, WC()->cart->get_cart_contents_total(), 'Cart contents total must equal selected contribution.' );
 
+    // Persist the classic cart through WooCommerce's checkout order builder.
+    $classic_order_id = WC_Checkout::instance()->create_order(
+        array(
+            'billing_first_name' => 'Integration',
+            'billing_last_name'  => 'Tester',
+            'billing_company'    => '',
+            'billing_country'    => 'GR',
+            'billing_address_1'  => '1 Test Street',
+            'billing_address_2'  => '',
+            'billing_city'       => 'Athens',
+            'billing_state'      => '',
+            'billing_postcode'   => '10558',
+            'billing_phone'      => '2100000000',
+            'billing_email'      => 'classic-integration@example.test',
+            'payment_method'     => '',
+            'order_comments'     => '',
+        )
+    );
+    omni_cf_assert( ! is_wp_error( $classic_order_id ) && $classic_order_id > 0, 'Classic checkout must create an order from the crowdfunding cart.' );
+
+    $classic_order = wc_get_order( $classic_order_id );
+    omni_cf_assert( $classic_order instanceof WC_Order, 'Classic checkout order must be loadable through WooCommerce CRUD.' );
+    omni_cf_assert_float( 12.34, $classic_order->get_total(), 'Classic checkout order total must equal the selected contribution.' );
+    $classic_items = $classic_order->get_items();
+    omni_cf_assert( 1 === count( $classic_items ), 'Classic checkout order must contain one line item.' );
+    $classic_item = reset( $classic_items );
+    omni_cf_assert( $product_id === $classic_item->get_product_id(), 'Classic checkout line item must reference the crowdfunding product.' );
+    omni_cf_assert_float( 12.34, $classic_item->get_total(), 'Classic checkout line total must preserve the selected contribution.' );
+
     // No configured maximum means ordinary higher values remain valid.
     $higher_cart = omni_cf_classic_add_to_cart( $product_id, true, '100' );
     omni_cf_assert( 1 === count( $higher_cart ), 'No-max campaign must accept a higher valid amount.' );
@@ -169,5 +203,11 @@ try {
     echo "woocommerce-open-pricing-integration: ok\n";
 } finally {
     omni_cf_reset_cart();
+    if ( $classic_order_id ) {
+        $classic_order = wc_get_order( $classic_order_id );
+        if ( $classic_order ) {
+            $classic_order->delete( true );
+        }
+    }
     wp_delete_post( $product_id, true );
 }

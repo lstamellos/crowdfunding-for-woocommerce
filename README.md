@@ -32,11 +32,21 @@ HPOS remains explicitly unsupported. The inherited campaign aggregation code sti
 
 A mixed cart/order containing both open-pricing products at the same time is a separate scenario and is not yet part of the compatibility baseline.
 
+## Updates
+
+From `3.1.14.3`, the plugin participates in the native WordPress update system through its `Update URI` header and the `update_plugins_github.com` provider hook.
+
+The provider reads the latest published full release from `lstamellos/crowdfunding-for-woocommerce`, caches that metadata for six hours, and accepts only the matching installable asset named `crowdfunding-for-woocommerce-VERSION.zip`. Drafts, prereleases and GitHub-generated source archives are not offered as WordPress updates.
+
+The provider does **not** force background installation. WordPress' normal per-plugin **Enable auto-updates** setting remains authoritative, so manual updates and `wp plugin update` work alongside native scheduled auto-updates.
+
 ## Releases
 
 Release tags matching `v*` are packaged automatically as installable WordPress ZIP files. Release packages exclude repository-only CI/tests/documentation artifacts and contain the plugin under the `crowdfunding-for-woocommerce/` root directory.
 
-Pre-release tags such as `v3.1.14.1-rc1` are published as GitHub pre-releases. Stable tags such as `v3.1.14.1` and `v3.1.14.2` are published as normal releases. A SHA-256 checksum is generated alongside each ZIP.
+Pre-release tags such as `v3.1.14.1-rc1` are published as GitHub pre-releases. Stable tags such as `v3.1.14.1`, `v3.1.14.2` and later are published as normal releases. A SHA-256 checksum is generated alongside each ZIP.
+
+The release workflow runs the complete CI suite against the exact tagged commit before publishing the installable ZIP. The updater therefore only sees stable releases that have passed the release validation gate.
 
 ## Security
 

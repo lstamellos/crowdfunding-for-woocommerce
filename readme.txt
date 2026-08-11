@@ -4,7 +4,7 @@ Tags: woocommerce, crowdfunding
 Requires at least: 6.8
 Requires PHP: 8.3
 Tested up to: 7.0
-Stable tag: 3.1.14.2
+Stable tag: 3.1.14.3
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -41,6 +41,14 @@ Cross-surface behavior is also covered: a contribution entered through the class
 TagDiv Composer / Newspaper layouts are supported when they render the native WooCommerce classic checkout surface or native WooCommerce Cart/Checkout Blocks. The OmniaTV production configuration was audited to confirm that TagDiv acts as the page/template rendering layer and does not replace WooCommerce checkout with a separate checkout engine.
 
 The crowdfunding open-price path is integration-tested against WordPress 7.0.3 and WooCommerce 11.0.1, including coexistence with Product Open Pricing (Name Your Price) for WooCommerce 1.7.4 on a separate product.
+
+= Updates =
+
+The maintained fork integrates with the native WordPress plugin updater through its `Update URI`.
+
+Update metadata is read from the latest published stable GitHub Release for `lstamellos/crowdfunding-for-woocommerce`. Drafts and prereleases are not offered. Only the installable release asset named `crowdfunding-for-woocommerce-VERSION.zip` from this repository is accepted; GitHub source-code archives are not used as update packages.
+
+The latest release metadata is cached for six hours. The updater does not force background installation: the normal WordPress per-plugin “Enable auto-updates” setting controls whether an available update is installed automatically. Manual updates from WordPress administration and WP-CLI remain supported.
 
 = Public Shortcodes =
 
@@ -83,8 +91,16 @@ Other:
 2. Activate it through WordPress administration.
 3. Configure it under WooCommerce > Settings > Crowdfunding.
 4. Create or edit crowdfunding products from WooCommerce administration only.
+5. Optionally enable native WordPress auto-updates for this plugin from the Plugins screen.
 
 == Changelog ==
+
+= 3.1.14.3 - 2026-08-12 =
+* FEATURE: Add a native WordPress `Update URI` provider backed by published stable GitHub Releases.
+* UPDATE: Accept only the version-matched installable release ZIP asset from `lstamellos/crowdfunding-for-woocommerce`; ignore GitHub source-code archives.
+* UPDATE: Cache GitHub release metadata for six hours and fail safely if release metadata or the expected package asset is unavailable.
+* UPDATE: Preserve the native WordPress per-plugin auto-update policy instead of forcing background installation.
+* TEST: Add deterministic integration coverage with mocked WordPress.org and GitHub release responses, including isolation from other GitHub-hosted plugins.
 
 = 3.1.14.2 - 2026-08-12 =
 * COMPAT: Add WooCommerce Store API handling for crowdfunding open-price cart data.

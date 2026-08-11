@@ -3,7 +3,7 @@
 Plugin Name: Crowdfunding for WooCommerce — OmniaTV
 Plugin URI: https://github.com/lstamellos/crowdfunding-for-woocommerce
 Description: Maintained OmniaTV fork for administrator-managed WooCommerce crowdfunding campaigns.
-Version: 3.1.14.2
+Version: 3.1.14.3
 Author: OmniaTV
 Author URI: https://omniatv.com/
 Update URI: https://github.com/lstamellos/crowdfunding-for-woocommerce
@@ -18,6 +18,13 @@ License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+if ( ! defined( 'ALG_WC_CROWDFUNDING_VERSION' ) ) {
+	define( 'ALG_WC_CROWDFUNDING_VERSION', '3.1.14.3' );
+}
+
+// Keep the update provider available even if WooCommerce is temporarily inactive.
+require_once __DIR__ . '/includes/class-wc-crowdfunding-github-updater.php';
 
 // Check if WooCommerce is active
 $plugin = 'woocommerce/woocommerce.php';
@@ -39,7 +46,7 @@ if ( ! class_exists( 'Alg_Woocommerce_Crowdfunding' ) ) :
  * Main Alg_Woocommerce_Crowdfunding Class
  *
  * @class   Alg_Woocommerce_Crowdfunding
- * @version 3.1.14.2
+ * @version 3.1.14.3
  */
 final class Alg_Woocommerce_Crowdfunding {
 	
@@ -52,7 +59,7 @@ final class Alg_Woocommerce_Crowdfunding {
 	 * @var   string
 	 * @since 2.3.0
 	 */
-	public $version = '3.1.14.2';
+	public $version = ALG_WC_CROWDFUNDING_VERSION;
 
 	/**
 	 * @var Alg_Woocommerce_Crowdfunding The single instance of the class

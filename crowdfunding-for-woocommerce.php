@@ -3,12 +3,13 @@
 Plugin Name: Crowdfunding for WooCommerce — OmniaTV
 Plugin URI: https://github.com/lstamellos/crowdfunding-for-woocommerce
 Description: Maintained OmniaTV fork for administrator-managed WooCommerce crowdfunding campaigns.
-Version: 3.1.14.1
+Version: 3.1.14.2
 Author: OmniaTV
 Author URI: https://omniatv.com/
 Update URI: https://github.com/lstamellos/crowdfunding-for-woocommerce
 Text Domain: crowdfunding-for-woocommerce
 Domain Path: /langs
+WC tested up to: 11.0
 Copyright: © 2018-2025 WP Wham. All rights reserved.
 Copyright: © 2026 OmniaTV modifications.
 License: GNU General Public License v3.0
@@ -28,7 +29,7 @@ if (
 add_action( 'before_woocommerce_init', function() {
 	if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
 		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, false );
-		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__, false );
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__, true );
 	}
 } );
 
@@ -38,7 +39,7 @@ if ( ! class_exists( 'Alg_Woocommerce_Crowdfunding' ) ) :
  * Main Alg_Woocommerce_Crowdfunding Class
  *
  * @class   Alg_Woocommerce_Crowdfunding
- * @version 3.1.14
+ * @version 3.1.14.2
  */
 final class Alg_Woocommerce_Crowdfunding {
 	
@@ -51,7 +52,7 @@ final class Alg_Woocommerce_Crowdfunding {
 	 * @var   string
 	 * @since 2.3.0
 	 */
-	public $version = '3.1.14.1';
+	public $version = '3.1.14.2';
 
 	/**
 	 * @var Alg_Woocommerce_Crowdfunding The single instance of the class

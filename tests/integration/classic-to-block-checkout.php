@@ -57,7 +57,7 @@ function omni_cf_bridge_response_text( $response ) {
     return wp_json_encode( $response->get_data() );
 }
 
-omni_cf_bridge_assert( defined( 'WC_VERSION' ) && '11.0.0' === WC_VERSION, 'WooCommerce 11.0.0 must be active.' );
+omni_cf_bridge_assert( defined( 'WC_VERSION' ) && '11.0.1' === WC_VERSION, 'WooCommerce 11.0.1 must be active.' );
 omni_cf_bridge_assert( class_exists( 'Alg_Woocommerce_Crowdfunding' ), 'Crowdfunding fork must be active.' );
 omni_cf_bridge_assert( class_exists( 'WC_Form_Handler' ), 'Classic WooCommerce form handler must be available.' );
 

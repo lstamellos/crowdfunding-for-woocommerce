@@ -56,7 +56,7 @@ function omni_cf_classic_add_to_cart( $product_id, $has_open_price = false, $ope
 }
 
 omni_cf_assert( defined( 'WC_VERSION' ), 'WooCommerce must be active.' );
-omni_cf_assert( '11.0.0' === WC_VERSION, 'Integration environment must use WooCommerce 11.0.0.' );
+omni_cf_assert( '11.0.1' === WC_VERSION, 'Integration environment must use WooCommerce 11.0.1.' );
 omni_cf_assert( class_exists( 'Alg_Woocommerce_Crowdfunding' ), 'Crowdfunding plugin must be active.' );
 omni_cf_assert( class_exists( 'Alg_Crowdfunding_Product_Open_Pricing' ), 'Crowdfunding open-pricing class must be loaded.' );
 omni_cf_assert( class_exists( 'WC_Form_Handler' ), 'WooCommerce classic form handler must be available.' );

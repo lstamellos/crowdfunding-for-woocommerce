@@ -47,8 +47,19 @@ function omni_cf_blocks_response_text( $response ) {
     if ( ! $response instanceof WP_REST_Response ) {
         return 'non-REST response';
     }
-    $data = $response->get_data();
-    return wp_json_encode( $data );
+    return wp_json_encode( $response->get_data() );
+}
+
+/**
+ * Store API response schemas may return nested stdClass values even though the
+ * top-level response data is an array. Normalize recursively for assertions.
+ */
+function omni_cf_blocks_response_array( $response ) {
+    if ( ! $response instanceof WP_REST_Response ) {
+        return array();
+    }
+
+    return json_decode( wp_json_encode( $response->get_data() ), true );
 }
 
 omni_cf_blocks_assert( defined( 'WC_VERSION' ), 'WooCommerce must be active.' );
@@ -135,9 +146,9 @@ try {
         'POST',
         '/wc/store/v1/cart/add-item',
         array(
-            'id'                            => $product_id,
-            'quantity'                      => 1,
-            'alg_crowdfunding_open_price'   => '2.99',
+            'id'                          => $product_id,
+            'quantity'                    => 1,
+            'alg_crowdfunding_open_price' => '2.99',
         )
     );
     omni_cf_blocks_assert(
@@ -195,7 +206,7 @@ try {
         $cart_response instanceof WP_REST_Response && 200 === $cart_response->get_status(),
         'Cart Store API response must succeed.'
     );
-    $cart_data = $cart_response->get_data();
+    $cart_data = omni_cf_blocks_response_array( $cart_response );
     omni_cf_blocks_assert( ! empty( $cart_data['items'] ), 'Cart Store API response must expose the crowdfunding cart item.' );
     omni_cf_blocks_assert(
         isset( $cart_data['totals']['total_items'] ) && '1234' === (string) $cart_data['totals']['total_items'],
@@ -231,7 +242,7 @@ try {
         'Checkout Store API must create an order from the crowdfunding cart. Response: ' . omni_cf_blocks_response_text( $checkout )
     );
 
-    $checkout_data = $checkout->get_data();
+    $checkout_data = omni_cf_blocks_response_array( $checkout );
     $order_id      = isset( $checkout_data['order_id'] ) ? absint( $checkout_data['order_id'] ) : 0;
     omni_cf_blocks_assert( $order_id > 0, 'Checkout Store API response must include an order id.' );
 

@@ -59,7 +59,7 @@ jobs:
           sudo mv /tmp/wp-cli.phar /usr/local/bin/wp
           wp --info
 
-      - name: Install WordPress 7.0.3 and WooCommerce 11.0.0
+      - name: Install WordPress 7.0.3 and WooCommerce 11.0.1
         run: |
           mkdir -p "$WP_PATH"
           wp core download --version=7.0.3 --path="$WP_PATH" --force
@@ -80,7 +80,7 @@ jobs:
             --skip-email
           wp plugin install woocommerce \
             --path="$WP_PATH" \
-            --version=11.0.0 \
+            --version=11.0.1 \
             --activate
           ln -s "$GITHUB_WORKSPACE" "$WP_PATH/wp-content/plugins/crowdfunding-for-woocommerce"
           wp plugin activate crowdfunding-for-woocommerce --path="$WP_PATH"

@@ -4,7 +4,7 @@ Tags: woocommerce, crowdfunding
 Requires at least: 6.8
 Requires PHP: 8.3
 Tested up to: 7.0
-Stable tag: 3.1.14.6
+Stable tag: 3.1.14.7
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -98,6 +98,12 @@ Other:
 5. Optionally enable native WordPress auto-updates for this plugin from the Plugins screen.
 
 == Changelog ==
+
+= 3.1.14.7 - 2026-08-13 =
+* FIX: Detect contribution changes made with native number-input spinner arrows and refresh Stripe Express Checkout / Google Pay / Apple Pay totals from the new amount.
+* FIX: Cover keyboard and wheel stepping of the numeric contribution field with the same value-driven wallet refresh path.
+* UX: Suppress duplicate Stripe wallet refreshes when multiple browser events report the same contribution value.
+* TEST: Add JavaScript syntax validation for the runtime open-pricing bridge to CI.
 
 = 3.1.14.6 - 2026-08-13 =
 * FIX: Refresh Stripe Express Checkout / Google Pay / Apple Pay product totals from the currently entered crowdfunding amount instead of retaining the configured default.

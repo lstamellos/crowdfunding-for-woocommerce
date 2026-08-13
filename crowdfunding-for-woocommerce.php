@@ -3,7 +3,7 @@
 Plugin Name: Crowdfunding for WooCommerce — OmniaTV
 Plugin URI: https://github.com/lstamellos/crowdfunding-for-woocommerce
 Description: Maintained OmniaTV fork for administrator-managed WooCommerce crowdfunding campaigns.
-Version: 3.1.14.4
+Version: 3.1.14.5
 Author: OmniaTV
 Author URI: https://omniatv.com/
 Update URI: https://github.com/lstamellos/crowdfunding-for-woocommerce
@@ -20,7 +20,7 @@ License URI: https://www.gnu.org/licenses/gpl-3.0.html
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 if ( ! defined( 'ALG_WC_CROWDFUNDING_VERSION' ) ) {
-	define( 'ALG_WC_CROWDFUNDING_VERSION', '3.1.14.4' );
+	define( 'ALG_WC_CROWDFUNDING_VERSION', '3.1.14.5' );
 }
 
 // Keep the update provider available even if WooCommerce is temporarily inactive.
@@ -46,7 +46,7 @@ if ( ! class_exists( 'Alg_Woocommerce_Crowdfunding' ) ) :
  * Main Alg_Woocommerce_Crowdfunding Class
  *
  * @class   Alg_Woocommerce_Crowdfunding
- * @version 3.1.14.4
+ * @version 3.1.14.5
  */
 final class Alg_Woocommerce_Crowdfunding {
 	
@@ -155,7 +155,7 @@ final class Alg_Woocommerce_Crowdfunding {
 	function enqueue_admin_scripts() {
 		wp_enqueue_script( 'jquery-ui-datepicker', false,                                                             array(),           $this->version );
 		wp_enqueue_script( 'jquery-ui-timepicker' );
-		wp_enqueue_script( 'alg-datepicker',       $this->plugin_url() . '/includes/js/alg-datepicker.js',            array( 'jquery' ), $this->version, true );
+		wp_enqueue_script( 'alg-datepicker',       $this->plugin_url() . '/includes/js/jquery.timepicker.min.js',      array( 'jquery' ), $this->version, true );
 		wp_enqueue_style(  'jquery-ui-css',        '//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css',     array(),           $this->version );
 		wp_enqueue_style(  'alg-timepicker',       $this->plugin_url() . '/includes/css/jquery.timepicker.min.css',   array(),           $this->version );
 		wp_enqueue_script( 'jquery-ui-dialog',     false,                                                             array(),           $this->version );

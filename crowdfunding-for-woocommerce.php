@@ -155,7 +155,7 @@ final class Alg_Woocommerce_Crowdfunding {
 	function enqueue_admin_scripts() {
 		wp_enqueue_script( 'jquery-ui-datepicker', false,                                                             array(),           $this->version );
 		wp_enqueue_script( 'jquery-ui-timepicker' );
-		wp_enqueue_script( 'alg-datepicker',       $this->plugin_url() . '/includes/js/jquery.timepicker.min.js',      array( 'jquery' ), $this->version, true );
+		wp_enqueue_script( 'alg-datepicker',       $this->plugin_url() . '/includes/js/alg-datepicker.js',            array( 'jquery' ), $this->version, true );
 		wp_enqueue_style(  'jquery-ui-css',        '//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css',     array(),           $this->version );
 		wp_enqueue_style(  'alg-timepicker',       $this->plugin_url() . '/includes/css/jquery.timepicker.min.css',   array(),           $this->version );
 		wp_enqueue_script( 'jquery-ui-dialog',     false,                                                             array(),           $this->version );

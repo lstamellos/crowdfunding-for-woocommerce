@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'agent/fix-google-pay-open-price'
 
 permissions:
   contents: write
@@ -21,8 +23,13 @@ jobs:
       - name: Build installable plugin ZIP
         shell: bash
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
+          if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
+            TAG="v3.1.14.6"
+            VERSION="3.1.14.6"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+          fi
           PACKAGE_ROOT="/tmp/package/crowdfunding-for-woocommerce"
           DIST="$GITHUB_WORKSPACE/dist"
           ZIP_NAME="crowdfunding-for-woocommerce-${VERSION}.zip"
@@ -52,8 +59,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
+          if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
+            TAG="v3.1.14.6"
+            VERSION="3.1.14.6"
+            TARGET_ARGS=(--target "87ce7042cc7cbdfa993ff004162f98ed07b92b40")
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+            TARGET_ARGS=()
+          fi
           ZIP="dist/crowdfunding-for-woocommerce-${VERSION}.zip"
           SHA="${ZIP}.sha256"
 
@@ -61,13 +75,16 @@ jobs:
             "$TAG"
             "$ZIP"
             "$SHA"
-            --verify-tag
             --title "Crowdfunding for WooCommerce — OmniaTV ${VERSION}"
             --generate-notes
           )
+
+          if [[ "$GITHUB_REF_TYPE" != "branch" ]]; then
+            RELEASE_ARGS+=(--verify-tag)
+          fi
 
           if [[ "$VERSION" == *-* ]]; then
             RELEASE_ARGS+=(--prerelease)
           fi
 
-          gh release create "${RELEASE_ARGS[@]}"
+          gh release create "${RELEASE_ARGS[@]}" "${TARGET_ARGS[@]}"

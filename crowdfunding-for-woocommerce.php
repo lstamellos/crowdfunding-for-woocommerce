@@ -177,13 +177,15 @@ final class Alg_Woocommerce_Crowdfunding {
 	/**
 	 * Include required core files used in admin and on the frontend.
 	 *
-	 * @version 3.0.0
+	 * @version 3.1.14.5
 	 */
 	function includes() {
 		// Product edit meta box etc.
 		require_once( 'includes/class-wc-crowdfunding-admin.php' );
 		// Core
 		$this->core = require_once( 'includes/class-wc-crowdfunding.php' );
+		// Request-scoped open pricing / express checkout bridge.
+		require_once( 'includes/class-wc-crowdfunding-runtime-pricing.php' );
 	}
 
 	/**
@@ -209,7 +211,7 @@ final class Alg_Woocommerce_Crowdfunding {
 			<tbody>
 				<?php foreach ( $settings as $setting ): ?>
 				<?php 
-				if ( in_array( $setting['type'], array( 'title', 'sectionend' ) ) ) { 
+				if ( in_array( $setting['type'], array( 'title', 'sectionend' ) ) { 
 					continue;
 				}
 				if ( isset( $setting['title'] ) ) {

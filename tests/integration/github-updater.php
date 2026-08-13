@@ -20,7 +20,7 @@ function alg_updater_assert( $condition, $message ) {
 $plugin_file = 'crowdfunding-for-woocommerce/crowdfunding-for-woocommerce.php';
 $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_file, false, false );
 
-alg_updater_assert( '3.1.14.3' === $plugin_data['Version'], 'plugin version is 3.1.14.3' );
+alg_updater_assert( '3.1.14.4' === $plugin_data['Version'], 'plugin version is 3.1.14.4' );
 alg_updater_assert(
 	'https://github.com/lstamellos/crowdfunding-for-woocommerce' === $plugin_data['UpdateURI'],
 	'Update URI points to the maintained repository'
@@ -50,16 +50,16 @@ add_filter(
 		}
 
 		$payload = array(
-			'tag_name' => 'v3.1.14.4',
-			'html_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/tag/v3.1.14.4',
+			'tag_name' => 'v3.1.14.5',
+			'html_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/tag/v3.1.14.5',
 			'assets'   => array(
 				array(
-					'name'                 => 'crowdfunding-for-woocommerce-3.1.14.4.zip.sha256',
-					'browser_download_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.4/crowdfunding-for-woocommerce-3.1.14.4.zip.sha256',
+					'name'                 => 'crowdfunding-for-woocommerce-3.1.14.5.zip.sha256',
+					'browser_download_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.5/crowdfunding-for-woocommerce-3.1.14.5.zip.sha256',
 				),
 				array(
-					'name'                 => 'crowdfunding-for-woocommerce-3.1.14.4.zip',
-					'browser_download_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.4/crowdfunding-for-woocommerce-3.1.14.4.zip',
+					'name'                 => 'crowdfunding-for-woocommerce-3.1.14.5.zip',
+					'browser_download_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.5/crowdfunding-for-woocommerce-3.1.14.5.zip',
 				),
 			),
 		);
@@ -85,9 +85,9 @@ alg_updater_assert( is_object( $updates ), 'WordPress update transient exists' )
 alg_updater_assert( isset( $updates->response[ $plugin_file ] ), 'custom provider exposes an available update' );
 
 $offer = $updates->response[ $plugin_file ];
-alg_updater_assert( '3.1.14.4' === $offer->new_version, 'latest stable release version is exposed' );
+alg_updater_assert( '3.1.14.5' === $offer->new_version, 'latest stable release version is exposed' );
 alg_updater_assert(
-	'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.4/crowdfunding-for-woocommerce-3.1.14.4.zip' === $offer->package,
+	'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.5/crowdfunding-for-woocommerce-3.1.14.5.zip' === $offer->package,
 	'installable release asset is used as the package'
 );
 alg_updater_assert(

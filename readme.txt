@@ -4,7 +4,7 @@ Tags: woocommerce, crowdfunding
 Requires at least: 6.8
 Requires PHP: 8.3
 Tested up to: 7.0
-Stable tag: 3.1.14.3
+Stable tag: 3.1.14.4
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -94,6 +94,12 @@ Other:
 5. Optionally enable native WordPress auto-updates for this plugin from the Plugins screen.
 
 == Changelog ==
+
+= 3.1.14.4 - 2026-08-13 =
+* UX: Display whole crowdfunding contribution amounts without redundant decimals (for example `5` instead of `5.00`).
+* UX: Display fractional contribution amounts with exactly two decimals and a comma separator (for example `5.5` or `5,5` as `5,50`).
+* COMPAT: Accept both comma and dot decimal separators on classic product-form and Store API open-price submissions while preserving canonical WooCommerce dot-decimal values internally.
+* TEST: Cover localized frontend rendering and comma-decimal cart/order persistence.
 
 = 3.1.14.3 - 2026-08-12 =
 * FEATURE: Add a native WordPress `Update URI` provider backed by published stable GitHub Releases.

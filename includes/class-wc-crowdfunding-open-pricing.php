@@ -4,7 +4,7 @@
  *
  * The WooCommerce Crowdfunding Product Open Pricing class.
  *
- * @version 3.1.14.2
+ * @version 3.1.14.4
  * @since   2.2.0
  * @author  Algoritmika Ltd.
  */
@@ -18,7 +18,7 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 	/**
 	 * Constructor.
 	 *
-	 * @version 3.1.14.2
+	 * @version 3.1.14.4
 	 * @since   2.2.0
 	 */
 	function __construct() {
@@ -307,7 +307,10 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 	}
 
 	/**
-	 * Normalize an amount using WooCommerce decimal rules.
+	 * Normalize a user-entered amount to the canonical dot-decimal form used by
+	 * WooCommerce for calculations and persistence. Both comma and dot are
+	 * accepted as decimal separators; thousands separators are intentionally not
+	 * supported in this single-value contribution field.
 	 *
 	 * @param mixed $value Value to normalize.
 	 * @param bool  $allow_empty Whether an empty value is allowed.
@@ -323,6 +326,11 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 			return $allow_empty ? '' : false;
 		}
 
+		if ( ! preg_match( '/^\d+(?:[.,]\d+)?$/D', $value ) ) {
+			return false;
+		}
+
+		$value = str_replace( ',', '.', $value );
 		$value = wc_format_decimal( $value, wc_get_price_decimals() );
 		if ( '' === $value || ! is_numeric( $value ) ) {
 			return false;
@@ -334,6 +342,30 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Format a canonical amount for the contribution input.
+	 *
+	 * Whole amounts are shown without redundant zero decimals. Amounts with a
+	 * non-zero fractional part are always shown with exactly two decimals and a
+	 * comma separator (for example 5.5 -> 5,50).
+	 *
+	 * @param mixed $value Canonical or user-entered amount.
+	 * @return string
+	 */
+	private function format_open_price_for_display( $value ) {
+		$normalized = $this->normalize_open_price( $value, true );
+		if ( false === $normalized || '' === $normalized ) {
+			return '';
+		}
+
+		$trimmed = wc_trim_zeros( $normalized );
+		if ( false === strpos( $trimmed, '.' ) ) {
+			return $trimmed;
+		}
+
+		return number_format( (float) $normalized, 2, ',', '' );
 	}
 
 	/**
@@ -390,9 +422,8 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 	/**
 	 * add_open_price_input_field_to_frontend.
 	 *
-	 * @version 3.0.0
+	 * @version 3.1.14.4
 	 * @since   2.2.0
-	 * @todo    [dev] (maybe) `$placeholder = $the_product->get_price();`
 	 */
 	function add_open_price_input_field_to_frontend() {
 		$the_product = wc_get_product();
@@ -405,6 +436,7 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 		$submitted   = $this->get_submitted_open_price();
 		$default     = $this->normalize_open_price( get_post_meta( $_product_id, '_alg_crowdfunding_product_open_price_default_price', true ), true );
 		$value       = is_string( $submitted ) && '' !== $submitted ? $submitted : ( false !== $default ? $default : '' );
+		$value       = $this->format_open_price_for_display( $value );
 
 		$price_decimals = get_post_meta( $_product_id, '_alg_crowdfunding_product_open_price_step', true );
 		$price_decimals = '' === $price_decimals ? wc_get_price_decimals() : absint( $price_decimals );
@@ -415,19 +447,20 @@ class Alg_Crowdfunding_Product_Open_Pricing {
 		$max_price = $this->normalize_open_price( get_post_meta( $_product_id, '_alg_crowdfunding_product_open_price_max_price', true ), true );
 
 		$attributes = array(
-			'type'  => 'number',
-			'class' => 'text',
-			'style' => 'width:75px;text-align:center;',
-			'name'  => 'alg_crowdfunding_open_price',
-			'id'    => 'alg_crowdfunding_open_price',
-			'value' => $value,
-			'step'  => $step,
+			'type'      => 'text',
+			'inputmode' => 'decimal',
+			'class'     => 'text',
+			'style'     => 'width:75px;text-align:center;',
+			'name'      => 'alg_crowdfunding_open_price',
+			'id'        => 'alg_crowdfunding_open_price',
+			'value'     => $value,
+			'data-step' => $step,
 		);
 		if ( false !== $min_price && '' !== $min_price ) {
-			$attributes['min'] = $min_price;
+			$attributes['data-min'] = $min_price;
 		}
 		if ( false !== $max_price && '' !== $max_price && (float) $max_price > 0 ) {
-			$attributes['max'] = $max_price;
+			$attributes['data-max'] = $max_price;
 		}
 
 		$attribute_html = '';

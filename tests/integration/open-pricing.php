@@ -55,6 +55,25 @@ function omni_cf_classic_add_to_cart( $product_id, $has_open_price = false, $ope
     return WC()->cart->get_cart();
 }
 
+function omni_cf_render_open_price_input( $product_id, $product ) {
+    $_POST = array();
+    $GLOBALS['post']    = get_post( $product_id );
+    $GLOBALS['product'] = $product;
+    setup_postdata( $GLOBALS['post'] );
+
+    ob_start();
+    do_action( 'woocommerce_before_add_to_cart_button' );
+    $html = ob_get_clean();
+    wp_reset_postdata();
+
+    omni_cf_assert(
+        1 === preg_match( '/<input[^>]*name="alg_crowdfunding_open_price"[^>]*>/i', $html, $input_match ),
+        'Product page must render the crowdfunding open-price input.'
+    );
+
+    return $input_match[0];
+}
+
 omni_cf_assert( defined( 'WC_VERSION' ), 'WooCommerce must be active.' );
 omni_cf_assert( '11.0.1' === WC_VERSION, 'Integration environment must use WooCommerce 11.0.1.' );
 omni_cf_assert( class_exists( 'Alg_Woocommerce_Crowdfunding' ), 'Crowdfunding plugin must be active.' );
@@ -99,25 +118,24 @@ try {
     omni_cf_assert( false === $product->supports( 'ajax_add_to_cart' ), 'Open-price campaign must disable AJAX add-to-cart.' );
     omni_cf_assert( true === $product->is_purchasable(), 'Published open-price campaign must be purchasable.' );
 
-    // Render the real product-page hook and verify production-equivalent input constraints.
-    $GLOBALS['post']    = get_post( $product_id );
-    $GLOBALS['product'] = $product;
-    setup_postdata( $GLOBALS['post'] );
+    // Render the real product-page hook and verify localized input behavior.
+    $input_html = omni_cf_render_open_price_input( $product_id, $product );
+    omni_cf_assert( false !== strpos( $input_html, 'type="text"' ), 'Localized contribution field must render as text.' );
+    omni_cf_assert( false !== strpos( $input_html, 'inputmode="decimal"' ), 'Localized contribution field must request a decimal keypad.' );
+    omni_cf_assert( false !== strpos( $input_html, 'data-min="3.00"' ), 'Rendered input must expose minimum 3 as data.' );
+    omni_cf_assert( false !== strpos( $input_html, 'value="10"' ), 'Whole default amount 10 must render without decimal zeros.' );
+    omni_cf_assert( 0 === preg_match( '/\bdata-max=/i', $input_html ), 'Rendered input must not invent a maximum.' );
+    omni_cf_assert( false !== strpos( $input_html, 'data-step="0.01"' ), 'Rendered input must retain cent precision metadata.' );
 
-    ob_start();
-    do_action( 'woocommerce_before_add_to_cart_button' );
-    $open_price_html = ob_get_clean();
-    wp_reset_postdata();
+    update_post_meta( $product_id, '_alg_crowdfunding_product_open_price_default_price', '5.5' );
+    $fractional_input = omni_cf_render_open_price_input( $product_id, $product );
+    omni_cf_assert( false !== strpos( $fractional_input, 'value="5,50"' ), 'Fractional default 5.5 must render as 5,50.' );
 
-    omni_cf_assert(
-        1 === preg_match( '/<input[^>]*name="alg_crowdfunding_open_price"[^>]*>/i', $open_price_html, $input_match ),
-        'Product page must render the crowdfunding open-price input.'
-    );
-    $input_html = $input_match[0];
-    omni_cf_assert( 1 === preg_match( '/\bmin="3(?:\.0+)?"/i', $input_html ), 'Rendered input must enforce minimum 3.' );
-    omni_cf_assert( 1 === preg_match( '/\bvalue="10(?:\.0+)?"/i', $input_html ), 'Rendered input must use default 10.' );
-    omni_cf_assert( 0 === preg_match( '/\bmax=/i', $input_html ), 'Rendered input must not invent a maximum.' );
-    omni_cf_assert( false !== strpos( $input_html, 'step="0.01"' ), 'Rendered input must allow cent precision.' );
+    update_post_meta( $product_id, '_alg_crowdfunding_product_open_price_default_price', '5.00' );
+    $whole_input = omni_cf_render_open_price_input( $product_id, $product );
+    omni_cf_assert( false !== strpos( $whole_input, 'value="5"' ), 'Whole default 5.00 must render as 5.' );
+
+    update_post_meta( $product_id, '_alg_crowdfunding_product_open_price_default_price', '10' );
 
     // Missing amount must be rejected by the real classic form-handler path.
     $missing_cart = omni_cf_classic_add_to_cart( $product_id );
@@ -142,13 +160,13 @@ try {
     $minimum_item = reset( $minimum_cart );
     omni_cf_assert_float( 3.0, $minimum_item['data']->get_price(), 'Minimum selected price must be applied to cart product.' );
 
-    // A normal decimal contribution must flow through cart item data and totals.
-    $decimal_cart = omni_cf_classic_add_to_cart( $product_id, true, '12.34' );
-    omni_cf_assert( 1 === count( $decimal_cart ), 'Valid decimal open price must add the product to cart.' );
+    // A comma-decimal contribution must normalize and flow through cart and order totals.
+    $decimal_cart = omni_cf_classic_add_to_cart( $product_id, true, '12,34' );
+    omni_cf_assert( 1 === count( $decimal_cart ), 'Valid comma-decimal open price must add the product to cart.' );
 
     $cart_item = reset( $decimal_cart );
     omni_cf_assert( isset( $cart_item['alg_crowdfunding_open_price'] ), 'Cart item must retain canonical crowdfunding open-price data.' );
-    omni_cf_assert_float( 12.34, $cart_item['alg_crowdfunding_open_price'], 'Cart item data must retain selected amount.' );
+    omni_cf_assert_float( 12.34, $cart_item['alg_crowdfunding_open_price'], 'Cart item data must canonicalize comma-decimal amount.' );
     omni_cf_assert_float( 12.34, $cart_item['data']->get_price(), 'WC_Product price must equal selected open price.' );
 
     WC()->cart->calculate_totals();

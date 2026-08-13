@@ -101,6 +101,9 @@ jobs:
       - name: Cart and Checkout Blocks integration
         run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/cart-checkout-blocks.php"
 
+      - name: Stripe express open pricing integration
+        run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/stripe-express-open-pricing.php"
+
       - name: Classic product form to Block checkout integration
         run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/classic-to-block-checkout.php"
 

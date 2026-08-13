@@ -4,7 +4,7 @@ Tags: woocommerce, crowdfunding
 Requires at least: 6.8
 Requires PHP: 8.3
 Tested up to: 7.0
-Stable tag: 3.1.14.5
+Stable tag: 3.1.14.6
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -52,6 +52,8 @@ Update metadata is read from the latest published stable GitHub Release for `lst
 
 The latest release metadata is cached for six hours. The updater does not force background installation: the normal WordPress per-plugin “Enable auto-updates” setting controls whether an available update is installed automatically. Manual updates from WordPress administration and WP-CLI remain supported.
 
+The native wp-admin plugin information dialog is populated from this packaged `readme.txt`, including Description, Installation and Changelog, so the installed plugin's details stay aligned with the shipped release.
+
 = Public Shortcodes =
 
 Backers and money:
@@ -96,6 +98,13 @@ Other:
 5. Optionally enable native WordPress auto-updates for this plugin from the Plugins screen.
 
 == Changelog ==
+
+= 3.1.14.6 - 2026-08-13 =
+* FIX: Refresh Stripe Express Checkout / Google Pay / Apple Pay product totals from the currently entered crowdfunding amount instead of retaining the configured default.
+* FIX: Map Stripe's `wc_crowdfunding_open_price` field into the canonical crowdfunding cart-item data in WooCommerce Store API add-to-cart requests.
+* COMPAT: Preserve the selected crowdfunding amount through direct Stripe Express Checkout cart and order flows.
+* ADMIN: Populate the native wp-admin plugin information dialog from the packaged `readme.txt` (Description, Installation and Changelog).
+* TEST: Add dedicated Stripe Express Checkout / Store API regression coverage.
 
 = 3.1.14.5 - 2026-08-13 =
 * FIX: Restore native numeric increment/decrement controls for the crowdfunding contribution field.

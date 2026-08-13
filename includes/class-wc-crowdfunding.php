@@ -2,7 +2,7 @@
 /**
  * Crowdfunding for WooCommerce
  *
- * @version 3.1.14.5
+ * @version 3.0.0
  * @since   1.0.0
  * @author  Algoritmika Ltd.
  */
@@ -16,7 +16,7 @@ class Alg_WC_Crowdfunding {
 	/**
 	 * Constructor.
 	 *
-	 * @version 3.1.14.5
+	 * @version 3.0.0
 	 * @todo    [dev] campaign authors (#12772)
 	 * @todo    [dev] automatic refunds for non-finished campaigns (maybe via PayPal authorize or maybe bulk refund) (#12495) (#12159)
 	 * @todo    [dev] payment collection directly to the campaign author (PayPal; bank etc.) (#11706)
@@ -73,7 +73,6 @@ class Alg_WC_Crowdfunding {
 
 			// Open Pricing
 			require_once( 'class-wc-crowdfunding-open-pricing.php' );
-			require_once( 'class-wc-crowdfunding-runtime-pricing.php' );
 
 			// Shortcodes
 			require_once( 'shortcodes/class-wc-crowdfunding-shortcodes.php' );

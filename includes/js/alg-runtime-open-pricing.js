@@ -4,6 +4,7 @@
 
 	const visibleSelector = '#alg_crowdfunding_open_price';
 	const expressName = 'wc_crowdfunding_open_price';
+	const stripeSelectedProductEndpoint = 'wc_stripe_get_selected_product_data';
 	let refreshTimer = null;
 
 	function getForm($input) {
@@ -13,6 +14,10 @@
 
 	function normalizeForNumberInput(value) {
 		return String(value || '').trim().replace(',', '.');
+	}
+
+	function getCurrentAmount() {
+		return normalizeForNumberInput($(visibleSelector).val());
 	}
 
 	function upgradeVisibleInput($input) {
@@ -53,6 +58,37 @@
 		return $alias;
 	}
 
+	function injectAmountIntoStripeRequest(options) {
+		const amount = getCurrentAmount();
+		if (!amount) {
+			return;
+		}
+
+		if (typeof options.data === 'string') {
+			const encodedName = encodeURIComponent(expressName) + '=';
+			if (options.data.indexOf(encodedName) === -1) {
+				options.data += (options.data ? '&' : '') + encodedName + encodeURIComponent(amount);
+			}
+			return;
+		}
+
+		if (!options.data || typeof options.data !== 'object') {
+			options.data = {};
+		}
+		options.data[expressName] = amount;
+	}
+
+	function registerStripeSelectedProductBridge() {
+		$.ajaxPrefilter(function (options) {
+			if (
+				typeof options.url === 'string' &&
+				options.url.indexOf(stripeSelectedProductEndpoint) !== -1
+			) {
+				injectAmountIntoStripeRequest(options);
+			}
+		});
+	}
+
 	function syncAmount($input, refreshStripe) {
 		const normalized = normalizeForNumberInput($input.val());
 		const $alias = ensureExpressAlias($input);
@@ -69,6 +105,8 @@
 			$(document.body).trigger('woocommerce_variation_has_changed');
 		}, 150);
 	}
+
+	registerStripeSelectedProductBridge();
 
 	$(function () {
 		const $input = $(visibleSelector);

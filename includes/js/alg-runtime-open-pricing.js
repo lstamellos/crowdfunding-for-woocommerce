@@ -58,33 +58,52 @@
 		return $alias;
 	}
 
-	function injectAmountIntoStripeRequest(options) {
+	function injectAmountIntoData(data) {
 		const amount = getCurrentAmount();
 		if (!amount) {
-			return;
+			return data;
 		}
 
-		if (typeof options.data === 'string') {
-			const encodedName = encodeURIComponent(expressName) + '=';
-			if (options.data.indexOf(encodedName) === -1) {
-				options.data += (options.data ? '&' : '') + encodedName + encodeURIComponent(amount);
-			}
-			return;
+		if (typeof data === 'string') {
+			const encodedName = encodeURIComponent(expressName);
+			const parts = data ? data.split('&').filter(Boolean) : [];
+			const filtered = parts.filter(function (part) {
+				return part.split('=')[0] !== encodedName;
+			});
+			filtered.push(encodedName + '=' + encodeURIComponent(amount));
+			return filtered.join('&');
 		}
 
-		if (!options.data || typeof options.data !== 'object') {
-			options.data = {};
+		if (!data || typeof data !== 'object') {
+			data = {};
 		}
-		options.data[expressName] = amount;
+		data[expressName] = amount;
+		return data;
 	}
 
 	function registerStripeSelectedProductBridge() {
+		const originalPost = $.post;
+		if (originalPost && !originalPost.algCrowdfundingRuntimePricing) {
+			const wrappedPost = function (url, data, success, dataType) {
+				if (
+					typeof url === 'string' &&
+					url.indexOf(stripeSelectedProductEndpoint) !== -1
+				) {
+					data = injectAmountIntoData(data);
+				}
+				return originalPost.call(this, url, data, success, dataType);
+			};
+			wrappedPost.algCrowdfundingRuntimePricing = true;
+			$.post = wrappedPost;
+		}
+
+		// Keep the prefilter as a fallback for integrations that call $.ajax directly.
 		$.ajaxPrefilter(function (options) {
 			if (
 				typeof options.url === 'string' &&
 				options.url.indexOf(stripeSelectedProductEndpoint) !== -1
 			) {
-				injectAmountIntoStripeRequest(options);
+				options.data = injectAmountIntoData(options.data);
 			}
 		});
 	}

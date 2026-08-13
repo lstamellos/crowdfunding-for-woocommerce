@@ -5,7 +5,7 @@
  * Keeps the user-entered crowdfunding amount request-scoped. The amount is
  * never persisted to the product's _price/_regular_price metadata.
  *
- * @version 3.1.14.5
+ * @version 3.1.14.6
  * @since   3.1.14.5
  */
 
@@ -27,6 +27,7 @@ class Alg_Crowdfunding_Runtime_Pricing {
 		add_action( 'wp_loaded', array( $this, 'bridge_express_request_field' ), 1 );
 		add_filter( 'woocommerce_product_get_price', array( $this, 'filter_runtime_price' ), PHP_INT_MAX, 2 );
 		add_filter( 'woocommerce_product_variation_get_price', array( $this, 'filter_runtime_price' ), PHP_INT_MAX, 2 );
+		add_filter( 'woocommerce_store_api_add_to_cart_data', array( $this, 'bridge_store_api_express_field' ), PHP_INT_MAX - 1, 2 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_bridge' ), PHP_INT_MAX );
 	}
 
@@ -46,6 +47,37 @@ class Alg_Crowdfunding_Runtime_Pricing {
 		$_POST[ self::LEGACY_FIELD ] = $_POST[ self::EXPRESS_FIELD ]; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$this->request_amount_loaded = false;
 		$this->request_amount        = false;
+	}
+
+	/**
+	 * Map Stripe Express Checkout's wc_* extension field to the canonical cart
+	 * item key before the existing Store API validation and pricing hooks run.
+	 *
+	 * @param array           $add_to_cart_data Store API add-to-cart data.
+	 * @param WP_REST_Request $request          Store API request.
+	 * @return array
+	 */
+	public function bridge_store_api_express_field( $add_to_cart_data, $request ) {
+		if ( ! $request instanceof WP_REST_Request ) {
+			return $add_to_cart_data;
+		}
+
+		if ( $request->has_param( self::LEGACY_FIELD ) || ! $request->has_param( self::EXPRESS_FIELD ) ) {
+			return $add_to_cart_data;
+		}
+
+		$product_id = isset( $add_to_cart_data['id'] ) ? absint( $add_to_cart_data['id'] ) : 0;
+		$product    = $product_id ? wc_get_product( $product_id ) : false;
+		if ( ! $product || ! $this->is_open_price_product( $product ) ) {
+			return $add_to_cart_data;
+		}
+
+		if ( ! isset( $add_to_cart_data['cart_item_data'] ) || ! is_array( $add_to_cart_data['cart_item_data'] ) ) {
+			$add_to_cart_data['cart_item_data'] = array();
+		}
+
+		$add_to_cart_data['cart_item_data'][ self::LEGACY_FIELD ] = $request->get_param( self::EXPRESS_FIELD );
+		return $add_to_cart_data;
 	}
 
 	/**

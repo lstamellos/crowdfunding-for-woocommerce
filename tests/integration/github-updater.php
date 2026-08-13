@@ -1,6 +1,7 @@
 <?php
 /**
- * Integration coverage for the GitHub Releases update provider.
+ * Integration coverage for the GitHub Releases update provider and native
+ * wp-admin plugin-information modal.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
+require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
 
 function alg_updater_assert( $condition, $message ) {
 	if ( ! $condition ) {
@@ -20,11 +22,35 @@ function alg_updater_assert( $condition, $message ) {
 $plugin_file = 'crowdfunding-for-woocommerce/crowdfunding-for-woocommerce.php';
 $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_file, false, false );
 
-alg_updater_assert( '3.1.14.5' === $plugin_data['Version'], 'plugin version is 3.1.14.5' );
+alg_updater_assert( '3.1.14.6' === $plugin_data['Version'], 'plugin version is 3.1.14.6' );
 alg_updater_assert(
 	'https://github.com/lstamellos/crowdfunding-for-woocommerce' === $plugin_data['UpdateURI'],
 	'Update URI points to the maintained repository'
 );
+
+$plugin_info = plugins_api(
+	'plugin_information',
+	(object) array( 'slug' => 'crowdfunding-for-woocommerce' )
+);
+alg_updater_assert( is_object( $plugin_info ) && ! is_wp_error( $plugin_info ), 'native plugin information is provided locally' );
+alg_updater_assert( '3.1.14.6' === $plugin_info->version, 'plugin information exposes the installed version' );
+alg_updater_assert(
+	isset( $plugin_info->sections['description'] ) &&
+	false !== strpos( wp_strip_all_tags( $plugin_info->sections['description'] ), 'This fork preserves the existing Crowdfunding for WooCommerce data model' ),
+	'plugin information Description is populated from readme.txt'
+);
+alg_updater_assert(
+	isset( $plugin_info->sections['installation'] ) &&
+	false !== strpos( wp_strip_all_tags( $plugin_info->sections['installation'] ), 'Install the plugin' ),
+	'plugin information Installation is populated from readme.txt'
+);
+alg_updater_assert(
+	isset( $plugin_info->sections['changelog'] ) &&
+	false !== strpos( wp_strip_all_tags( $plugin_info->sections['changelog'] ), '3.1.14.6' ),
+	'plugin information Changelog is populated from readme.txt'
+);
+alg_updater_assert( '6.8' === $plugin_info->requires, 'plugin information reads Requires at least from readme.txt' );
+alg_updater_assert( '8.3' === $plugin_info->requires_php, 'plugin information reads Requires PHP from readme.txt' );
 
 add_filter(
 	'pre_http_request',
@@ -50,16 +76,16 @@ add_filter(
 		}
 
 		$payload = array(
-			'tag_name' => 'v3.1.14.6',
-			'html_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/tag/v3.1.14.6',
+			'tag_name' => 'v3.1.14.7',
+			'html_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/tag/v3.1.14.7',
 			'assets'   => array(
 				array(
-					'name'                 => 'crowdfunding-for-woocommerce-3.1.14.6.zip.sha256',
-					'browser_download_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.6/crowdfunding-for-woocommerce-3.1.14.6.zip.sha256',
+					'name'                 => 'crowdfunding-for-woocommerce-3.1.14.7.zip.sha256',
+					'browser_download_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.7/crowdfunding-for-woocommerce-3.1.14.7.zip.sha256',
 				),
 				array(
-					'name'                 => 'crowdfunding-for-woocommerce-3.1.14.6.zip',
-					'browser_download_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.6/crowdfunding-for-woocommerce-3.1.14.6.zip',
+					'name'                 => 'crowdfunding-for-woocommerce-3.1.14.7.zip',
+					'browser_download_url' => 'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.7/crowdfunding-for-woocommerce-3.1.14.7.zip',
 				),
 			),
 		);
@@ -85,9 +111,9 @@ alg_updater_assert( is_object( $updates ), 'WordPress update transient exists' )
 alg_updater_assert( isset( $updates->response[ $plugin_file ] ), 'custom provider exposes an available update' );
 
 $offer = $updates->response[ $plugin_file ];
-alg_updater_assert( '3.1.14.6' === $offer->new_version, 'latest stable release version is exposed' );
+alg_updater_assert( '3.1.14.7' === $offer->new_version, 'latest stable release version is exposed' );
 alg_updater_assert(
-	'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.6/crowdfunding-for-woocommerce-3.1.14.6.zip' === $offer->package,
+	'https://github.com/lstamellos/crowdfunding-for-woocommerce/releases/download/v3.1.14.7/crowdfunding-for-woocommerce-3.1.14.7.zip' === $offer->package,
 	'installable release asset is used as the package'
 );
 alg_updater_assert(
@@ -105,7 +131,15 @@ $other = apply_filters(
 );
 alg_updater_assert( isset( $other['sentinel'] ) && true === $other['sentinel'], 'provider does not interfere with other GitHub-hosted plugins' );
 
+$other_info = apply_filters(
+	'plugins_api',
+	false,
+	'plugin_information',
+	(object) array( 'slug' => 'other-plugin' )
+);
+alg_updater_assert( false === $other_info, 'plugin information provider does not intercept other plugin slugs' );
+
 delete_site_transient( 'alg_crowdfunding_github_release' );
 delete_site_transient( 'update_plugins' );
 
-echo "GitHub updater integration passed.\n";
+echo "GitHub updater and plugin-information integration passed.\n";

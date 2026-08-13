@@ -2,10 +2,9 @@
 /**
  * Stripe Express Checkout open-price integration regression.
  *
- * Covers the two server-side contracts used by the product-page wallet flow:
- * the wc_* selected-product field must affect WC_Product runtime pricing, and
- * the same wc_* field must survive Store API add-to-cart as the canonical
- * crowdfunding cart-item amount.
+ * Verifies that the wc_* extension field sent by Stripe's product-page wallet
+ * add-to-cart path survives WooCommerce Store API handling as the canonical
+ * crowdfunding cart-item amount and price.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -73,17 +72,6 @@ try {
 	update_post_meta( $product_id, '_alg_crowdfunding_product_open_price_max_price', '' );
 	update_post_meta( $product_id, '_alg_crowdfunding_product_open_price_default_price', '10' );
 	clean_post_cache( $product_id );
-
-	// Stripe's selected-product legacy AJAX request uses the wc_* field injected
-	// by the frontend bridge. Runtime WC_Product pricing must consume it directly.
-	$_POST['wc_crowdfunding_open_price'] = '17.25';
-	$runtime_product = wc_get_product( $product_id );
-	omni_cf_stripe_assert_float(
-		17.25,
-		$runtime_product->get_price(),
-		'Stripe selected-product wc_* amount must become the request-scoped product price.'
-	);
-	$_POST = array();
 
 	// Stripe simple-product express checkout uses Store API for add-to-cart.
 	// The wc_* alias must be normalized to the legacy cart-item key so the

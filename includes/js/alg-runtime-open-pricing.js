@@ -11,6 +11,30 @@
 		return $cartForm.length ? $cartForm : $('form.cart').first();
 	}
 
+	function normalizeForNumberInput(value) {
+		return String(value || '').trim().replace(',', '.');
+	}
+
+	function upgradeVisibleInput($input) {
+		const step = $input.attr('data-step');
+		const min = $input.attr('data-min');
+		const max = $input.attr('data-max');
+		const value = normalizeForNumberInput($input.val());
+
+		$input.attr('type', 'number');
+		$input.attr('inputmode', 'decimal');
+		if (step) {
+			$input.attr('step', step);
+		}
+		if (min) {
+			$input.attr('min', min);
+		}
+		if (max) {
+			$input.attr('max', max);
+		}
+		$input.val(value);
+	}
+
 	function ensureExpressAlias($input) {
 		const $form = getForm($input);
 		if (!$form.length) {
@@ -22,7 +46,7 @@
 			$alias = $('<input>', {
 				type: 'hidden',
 				name: expressName,
-				value: $input.val()
+				value: normalizeForNumberInput($input.val())
 			}).appendTo($form);
 		}
 
@@ -30,9 +54,10 @@
 	}
 
 	function syncAmount($input, refreshStripe) {
+		const normalized = normalizeForNumberInput($input.val());
 		const $alias = ensureExpressAlias($input);
 		if ($alias.length) {
-			$alias.val($input.val());
+			$alias.val(normalized);
 		}
 
 		if (!refreshStripe) {
@@ -51,6 +76,7 @@
 			return;
 		}
 
+		upgradeVisibleInput($input);
 		syncAmount($input, false);
 
 		$input.on('input change', function () {

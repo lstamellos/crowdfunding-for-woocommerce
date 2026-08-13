@@ -24,6 +24,8 @@ jobs:
           coverage: none
       - name: PHP syntax
         run: find . -type f -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+      - name: Runtime pricing JavaScript syntax
+        run: node --check includes/js/alg-runtime-open-pricing.js
       - name: Security smoke tests
         run: php tests/security-smoke.php
 

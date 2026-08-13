@@ -4,7 +4,7 @@ Tags: woocommerce, crowdfunding
 Requires at least: 6.8
 Requires PHP: 8.3
 Tested up to: 7.0
-Stable tag: 3.1.14.4
+Stable tag: 3.1.14.5
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -37,6 +37,8 @@ HPOS remains deliberately declared incompatible because the upstream order-disco
 Classic WooCommerce cart/checkout and Cart/Checkout Blocks are supported. The Blocks path uses WooCommerce Store API integration so the crowdfunding open-price value is validated, retained in cart data, applied to cart totals and persisted to the order.
 
 Cross-surface behavior is also covered: a contribution entered through the classic WooCommerce product form can continue through a Cart or Checkout Block without losing the selected amount.
+
+Product-page express checkout integrations can consume the selected crowdfunding amount through the request-scoped WooCommerce product price. The maintained fork also exposes a synchronized `wc_crowdfunding_open_price` field for WooCommerce Stripe Express Checkout while retaining the legacy `alg_crowdfunding_open_price` field for backward compatibility. The selected amount is never persisted to the product's `_price` metadata.
 
 TagDiv Composer / Newspaper layouts are supported when they render the native WooCommerce classic checkout surface or native WooCommerce Cart/Checkout Blocks. The OmniaTV production configuration was audited to confirm that TagDiv acts as the page/template rendering layer and does not replace WooCommerce checkout with a separate checkout engine.
 
@@ -94,6 +96,13 @@ Other:
 5. Optionally enable native WordPress auto-updates for this plugin from the Plugins screen.
 
 == Changelog ==
+
+= 3.1.14.5 - 2026-08-13 =
+* FIX: Restore native numeric increment/decrement controls for the crowdfunding contribution field.
+* COMPAT: Use the submitted crowdfunding contribution as a request-scoped `WC_Product` price without persisting product price metadata.
+* COMPAT: Bridge the selected contribution to WooCommerce Stripe Express Checkout through a synchronized `wc_`-prefixed field so Apple Pay and Google Pay product-page flows receive the selected amount.
+* UX: Refresh product-page express checkout totals when the contribution amount changes.
+* COMPAT: Retain the existing classic cart and Store API cart-item persistence paths as backward-compatible fallbacks.
 
 = 3.1.14.4 - 2026-08-13 =
 * UX: Display whole crowdfunding contribution amounts without redundant decimals (for example `5` instead of `5.00`).

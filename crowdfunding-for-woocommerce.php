@@ -211,7 +211,7 @@ final class Alg_Woocommerce_Crowdfunding {
 			<tbody>
 				<?php foreach ( $settings as $setting ): ?>
 				<?php 
-				if ( in_array( $setting['type'], array( 'title', 'sectionend' ) ) { 
+				if ( in_array( $setting['type'], array( 'title', 'sectionend' ) ) ) { 
 					continue;
 				}
 				if ( isset( $setting['title'] ) ) {

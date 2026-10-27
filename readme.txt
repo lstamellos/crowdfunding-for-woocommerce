@@ -4,7 +4,7 @@ Tags: woocommerce, crowdfunding
 Requires at least: 6.8
 Requires PHP: 8.3
 Tested up to: 7.0
-Stable tag: 3.1.14.7
+Stable tag: 3.1.14.8
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -98,6 +98,14 @@ Other:
 5. Optionally enable native WordPress auto-updates for this plugin from the Plugins screen.
 
 == Changelog ==
+
+= 3.1.14.8 - 2026-10-28 =
+* FIX: Format stored campaign start and end date/time together in the WordPress site timezone, preserving the configured local wall-clock hour.
+* FIX: Respect WordPress date formats that already contain a clock: both date-only and datetime shortcodes render the campaign's saved hour instead of midnight or duplicated hours.
+* FIX: Avoid showing a fabricated midnight when a stored campaign time is missing or invalid.
+* ADMIN: Use unambiguous 24-hour HH:mm input for campaign start/end times; previously saved 12-hour AM/PM values remain readable.
+* TEST: Cover afternoon, midnight, legacy AM/PM, site timezone, absent/invalid time and unchanged metadata.
+
 
 = 3.1.14.7 - 2026-08-13 =
 * FIX: Detect contribution changes made with native number-input spinner arrows and refresh Stripe Express Checkout / Google Pay / Apple Pay totals from the new amount.

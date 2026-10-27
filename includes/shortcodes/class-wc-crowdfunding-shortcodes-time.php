@@ -106,9 +106,59 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	}
 
 	/**
+	 * Format a campaign date/time together in the WordPress site timezone.
+	 *
+	 * The legacy formatter parsed the time alone with strtotime(), which
+	 * detached it from its campaign date and could silently display midnight
+	 * when the stored time was not parsed correctly.
+	 *
+	 * Legacy date and time metadata remains unchanged. An empty or invalid
+	 * time is never silently replaced with 00:00.
+	 *
+	 * @since 3.1.14.8
+	 */
+	private function format_campaign_datetime( $product_id, $date_key, $time_key, $atts ) {
+		$date = trim( (string) get_post_meta( $product_id, '_alg_crowdfunding_' . $date_key, true ) );
+		$time = trim( (string) get_post_meta( $product_id, '_alg_crowdfunding_' . $time_key, true ) );
+
+		if ( '' === $date ) {
+			return '';
+		}
+
+		$date_format = isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' );
+		$time_format = isset( $atts['time_format'] ) ? $atts['time_format'] : get_option( 'time_format' );
+		$timezone    = wp_timezone();
+
+		try {
+			$datetime = new DateTimeImmutable( trim( $date . ' ' . $time ), $timezone );
+			// A site's date_format can already contain a clock (e.g. "d/m/Y H:i").
+		// In that case do not print the same hour twice.
+		$format = $date_format;
+		if ( '' === $time ) {
+			$format = preg_replace( '/(?:\\s+|,\\s*)[gGhH](?::i)?(?::s)?(?:\\s*[aA])?$/', '', $format );
+		}
+		if ( '' !== $time && '' !== $time_format && ! preg_match( '/(?<!\\\\)[gGhHis]/', $date_format ) ) {
+			$format .= ' ' . $time_format;
+		}
+			return wp_date( $format, $datetime->getTimestamp(), $timezone );
+		} catch ( Exception $exception ) {
+			// A bad time must not turn into a plausible but false 00:00.
+			try {
+				$date_only = new DateTimeImmutable( $date, $timezone );
+				// When date_format ends in a clock, remove that clock if the
+				// saved time is invalid rather than showing a made-up midnight.
+				$fallback_format = preg_replace( '/(?:\\s+|,\\s*)[gGhH](?::i)?(?::s)?(?:\\s*[aA])?$/', '', $date_format );
+				return wp_date( $fallback_format, $date_only->getTimestamp(), $timezone );
+			} catch ( Exception $ignored ) {
+				return '';
+			}
+		}
+	}
+
+	/**
 	 * alg_product_crowdfunding_deadline_datetime.
 	 *
-	 * @version 3.0.0
+	 * @version 3.1.14.8
 	 * @since   1.1.0
 	 */
 	function alg_product_crowdfunding_deadline_datetime( $atts ) {
@@ -117,13 +167,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 			return '';
 		}
 		return $this->output_shortcode(
-			esc_html(
-				date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
-					strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline', true ) ) ) .
-				' ' .
-				date_i18n( ( isset( $atts['time_format'] ) ? $atts['time_format'] : get_option( 'time_format' ) ),
-					strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline_time', true ) ) )
-			),
+			esc_html( $this->format_campaign_datetime( $product_id, 'deadline', 'deadline_time', $atts ) ),
 			$atts
 		);
 	}
@@ -145,7 +189,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	/**
 	 * alg_product_crowdfunding_startdatetime.
 	 *
-	 * @version 3.0.0
+	 * @version 3.1.14.8
 	 * @since   1.1.0
 	 */
 	function alg_product_crowdfunding_startdatetime( $atts ) {
@@ -154,13 +198,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 			return '';
 		}
 		return $this->output_shortcode(
-			esc_html(
-				date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
-					strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_startdate', true ) ) ) .
-				' ' .
-				date_i18n( ( isset( $atts['time_format'] ) ? $atts['time_format'] : get_option( 'time_format' ) ),
-					strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_starttime', true ) ) )
-			),
+			esc_html( $this->format_campaign_datetime( $product_id, 'startdate', 'starttime', $atts ) ),
 			$atts
 		);
 	}
@@ -182,7 +220,7 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 	/**
 	 * alg_product_crowdfunding_startdate.
 	 *
-	 * @version 3.0.0
+	 * @version 3.1.14.8
 	 * @since   1.0.0
 	 */
 	function alg_product_crowdfunding_startdate( $atts ) {
@@ -190,14 +228,20 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 		if ( ! $product_id ) {
 			return '';
 		}
-		return $this->output_shortcode( esc_html( date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
-			strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_startdate', true ) ) ) ), $atts );
+		// Respect date-only formats; if the configured date format itself
+		// includes an hour, use the campaign's saved hour, not midnight.
+		$date_only_atts = is_array( $atts ) ? $atts : array();
+		$date_only_atts['time_format'] = '';
+		return $this->output_shortcode(
+			esc_html( $this->format_campaign_datetime( $product_id, 'startdate', 'starttime', $date_only_atts ) ),
+			$atts
+		);
 	}
 
 	/**
 	 * alg_product_crowdfunding_deadline.
 	 *
-	 * @version 3.0.0
+	 * @version 3.1.14.8
 	 * @since   1.0.0
 	 */
 	function alg_product_crowdfunding_deadline( $atts ) {
@@ -205,8 +249,14 @@ class Alg_WC_Crowdfunding_Shortcodes_Time extends Alg_WC_Crowdfunding_Shortcodes
 		if ( ! $product_id ) {
 			return '';
 		}
-		return $this->output_shortcode( esc_html( date_i18n( ( isset( $atts['date_format'] ) ? $atts['date_format'] : get_option( 'date_format' ) ),
-			strtotime( get_post_meta( $product_id, '_' . 'alg_crowdfunding_deadline', true ) ) ) ), $atts );
+		// Respect date-only formats; if the configured date format itself
+		// includes an hour, use the campaign's saved hour, not midnight.
+		$date_only_atts = is_array( $atts ) ? $atts : array();
+		$date_only_atts['time_format'] = '';
+		return $this->output_shortcode(
+			esc_html( $this->format_campaign_datetime( $product_id, 'deadline', 'deadline_time', $date_only_atts ) ),
+			$atts
+		);
 	}
 
 	/**

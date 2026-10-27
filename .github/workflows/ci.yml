@@ -97,6 +97,9 @@ jobs:
             '{"enabled":"yes","title":"Direct bank transfer","description":"","instructions":""}' \
             --format=json
 
+      - name: Crowdfunding campaign datetime integration
+        run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/campaign-datetime.php"
+
       - name: Crowdfunding open pricing integration
         run: wp --path="$WP_PATH" eval-file "$GITHUB_WORKSPACE/tests/integration/open-pricing.php"
 

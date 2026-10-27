@@ -1,7 +1,7 @@
 /**
  * alg-datepicker
  *
- * @version 3.0.0
+ * @version 3.1.14.8
  * @author  Algoritmika Ltd.
  */
 
@@ -10,5 +10,5 @@ jQuery( document ).ready( function() {
 		dateFormat: 'yy/mm/dd',
 		firstDay: 1
 	} );
-	jQuery( 'input[display="alg_crowdfunding_time"]' ).timepicker();
+	jQuery( 'input[display="alg_crowdfunding_time"]' ).timepicker( { timeFormat: 'HH:mm' } );
 } );
